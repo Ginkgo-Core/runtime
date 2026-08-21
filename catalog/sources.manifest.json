@@ -1,5 +1,5 @@
 {
-  "description": "Explicitly pinned GitHub sources the Runtime Catalog (RK-07) projects. GitHub is the source of truth (invariant 8); this snapshot is a byte-exact, read-only copy taken at the commit SHAs below so the catalog builds offline and deterministically. Re-pinning is an explicit, reviewable commit.",
+  "description": "Explicitly pinned GitHub sources the Capability Runtime Kernel reads. GitHub is the source of truth (invariant 8); this snapshot is a byte-exact, read-only copy taken at the commit SHAs below so the kernel builds offline and deterministically. Sources with role 'projected' are projected by the Runtime Catalog (RK-07); sources with role 'authority' are frozen contracts the kernel validates against and never projects. Re-pinning is an explicit, reviewable commit.",
   "schema_version": "ginkgo.runtime-catalog.source-manifest.v1",
   "sources": [
     {
@@ -14,6 +14,45 @@
       "sha256": "5afef04d4eff04f86c9a91f5b89e0256ffbb88713918557abc26890469331c10",
       "size_bytes": 3386,
       "snapshot_path": "catalog/sources/ai-stack/contracts/core/capability-request.schema.json"
+    },
+    {
+      "blob_sha": "8ffdc762aff69fa9e62ccbee10526702177744ad",
+      "collection_key": null,
+      "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
+      "path": "contracts/core/capability-result.schema.json",
+      "record_class": null,
+      "ref": "master",
+      "repo": "Ginkgo-Core/ai-stack",
+      "role": "authority",
+      "sha256": "83023818ea225a6128190ca5738cd23f50295bddcc47f43807a5b2a0ab7c8574",
+      "size_bytes": 3092,
+      "snapshot_path": "catalog/sources/ai-stack/contracts/core/capability-result.schema.json"
+    },
+    {
+      "blob_sha": "8e4b130ac150dcbbc91e883ffb3b6af1718b0987",
+      "collection_key": null,
+      "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
+      "path": "contracts/core/error.schema.json",
+      "record_class": null,
+      "ref": "master",
+      "repo": "Ginkgo-Core/ai-stack",
+      "role": "authority",
+      "sha256": "dc97cb0e579eaa959fc4a6b3a2dd70f6753f29e82c5129607c30eab325bd7c12",
+      "size_bytes": 908,
+      "snapshot_path": "catalog/sources/ai-stack/contracts/core/error.schema.json"
+    },
+    {
+      "blob_sha": "38243f3f524bd23b43506576c3c387747f45eb3e",
+      "collection_key": null,
+      "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
+      "path": "contracts/runtime/runtime-execution-result.schema.json",
+      "record_class": null,
+      "ref": "master",
+      "repo": "Ginkgo-Core/ai-stack",
+      "role": "authority",
+      "sha256": "fa0ebe421dad55d4eb63207d692744ed40a0f8dc5823fe2e3a310157de5f82d4",
+      "size_bytes": 11779,
+      "snapshot_path": "catalog/sources/ai-stack/contracts/runtime/runtime-execution-result.schema.json"
     },
     {
       "blob_sha": "5ffb05ed5745c8a7abf16d25394f56870fab2161",

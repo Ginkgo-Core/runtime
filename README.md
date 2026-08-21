@@ -2,10 +2,10 @@
 
 **Implementation of the Ginkgo Capability Runtime Kernel.**
 
-> Status: **RK-07 Runtime Catalog implemented.** This repository was designated as the kernel
-> implementation host on 2026-08-20 (BLK-16). The architecture it implements merged first:
-> `ai-stack#45` (Capability Runtime Kernel v1) and `ai-stack#47` (static P0 conformance).
-> Nothing else in the kernel exists yet.
+> Status: **RK-07 Runtime Catalog and RK-01 Capability Bus implemented.** This repository was
+> designated as the kernel implementation host on 2026-08-20 (BLK-16). The architecture it
+> implements merged first: `ai-stack#45` (Capability Runtime Kernel v1) and `ai-stack#47`
+> (static P0 conformance). Nothing else in the kernel exists yet.
 
 Renamed from `ginkgo-infra`, which was an unused scaffold. History, MIT licence and private
 visibility are unchanged.
@@ -27,8 +27,8 @@ Architecture and contracts are **not** owned here.
 | Component | Status | Where |
 |---|---|---|
 | **RK-07 Runtime Catalog** | **implemented** | [`catalog/`](catalog/README.md) · [`src/ginkgo_runtime/catalog/`](src/ginkgo_runtime/catalog) |
+| **RK-01 Capability Bus** *(absorbs RK-05)* | **implemented** | [`src/ginkgo_runtime/bus/`](src/ginkgo_runtime/bus/README.md) |
 | RK-10 runtime conformance | not started | `ai-stack#38` |
-| RK-01 Capability Bus | not started | `ai-stack#39` |
 | RK-02 Domain Router | not started | `ai-stack#40` |
 | RK-04 Policy + Lifecycle Gate | not started | `ai-stack#41` |
 | RK-08A Executor Contract | not started | `ai-stack#32` |
@@ -44,13 +44,15 @@ PYTHONPATH=src python -m ginkgo_runtime.catalog reject     # the migration backl
 python -m pytest tests -q
 ```
 
-The catalog builds offline from sources pinned by commit SHA. It opens no socket, reads no
-credential and writes to no upstream registry.
+Both components read their frozen contracts from sources pinned by commit SHA. They open no
+socket, read no credential and write to no upstream registry.
 
 ### Stack
 
 Python ≥ 3.11, standard library plus **PyYAML** — one runtime dependency, no framework, no build
 step. Rationale and the options rejected: [`ADR-RT-001`](docs/adr/ADR-RT-001-implementation-stack.md).
+Schema validation is in-tree and refuses any keyword it does not implement:
+[`ADR-RT-002`](docs/adr/ADR-RT-002-strict-schema-validator.md).
 
 ## Will contain
 

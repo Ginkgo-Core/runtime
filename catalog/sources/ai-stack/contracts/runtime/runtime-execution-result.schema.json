@@ -1,0 +1,448 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Ginkgo-Core/ai-stack/contracts/runtime/runtime-execution-result.schema.json",
+  "title": "Ginkgo RuntimeExecutionResult v1",
+  "description": "INTERNAL result of one execution attempt. Its `state` is the EXECUTOR state machine and is a different axis from the frozen CapabilityResult v1 `status`. The mapping between the two is declared in this schema under x-ginkgo-status-mapping and is applied by the Capability Bus (RK-01), not by the executor. Leaving that mapping undeclared is a known defect elsewhere in the ecosystem.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "execution_id",
+    "request_id",
+    "correlation_id",
+    "idempotency_key",
+    "decision_ref",
+    "state"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "ginkgo.runtime-execution-result.v1"
+    },
+    "execution_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "replayed": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when this result was returned from an existing execution under the same idempotency_key. A replay writes no second evidence record."
+    },
+    "decision_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_id",
+        "decision_hash"
+      ],
+      "properties": {
+        "decision_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "running",
+        "succeeded",
+        "failed",
+        "cancelled",
+        "timed_out"
+      ],
+      "description": "Normalized executor state. queued and running are non-terminal and produce no CapabilityResult. This vocabulary must not be confused with the TaskOps task machine, a provider job machine, or a container lifecycle machine - four distinct ladders already exist in the ecosystem."
+    },
+    "terminal": {
+      "type": "boolean"
+    },
+    "partial": {
+      "type": "boolean",
+      "default": false,
+      "description": "Set by the skill when it produced usable but incomplete output. Drives the SUCCESS -> PARTIAL distinction on CapabilityResult."
+    },
+    "output": {},
+    "error": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "../core/error.schema.json"
+        }
+      ],
+      "description": "References the FROZEN contracts/core/error.schema.json rather than restating it. An earlier inline copy set additionalProperties:false and omitted evidence_refs, making it strictly narrower than the contract it claimed to match - the exact drift this kernel rejects RuntimeBindingDescriptor to avoid."
+    },
+    "dead_lettered": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dead_lettered"
+      ],
+      "properties": {
+        "dead_lettered": {
+          "type": "boolean"
+        },
+        "dead_letter_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "attempts_exhausted": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        }
+      },
+      "description": "A terminal failure after retry exhaustion is recorded, never silently dropped."
+    },
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "started_at",
+        "ended_at",
+        "duration_ms",
+        "attempts"
+      ],
+      "properties": {
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "ended_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "duration_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attempts": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "iterations": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "tool_calls": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "lease_released": {
+          "type": "boolean",
+          "default": true
+        },
+        "cost_events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "event_id",
+              "amount",
+              "currency",
+              "occurred_at"
+            ],
+            "properties": {
+              "event_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "amount": {
+                "type": "number",
+                "minimum": 0
+              },
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              },
+              "occurred_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "meter": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "quantity": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0
+              }
+            }
+          },
+          "description": "Shape-compatible with CapabilityResult v1 cost_events."
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "artifact_ref"
+        ],
+        "properties": {
+          "artifact_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-fA-F0-9]{64}$"
+          },
+          "media_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bytes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        }
+      },
+      "description": "References and hashes only. Never artifact contents, never a raw provider path exposed to a caller."
+    },
+    "evidence_telemetry_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Raw telemetry references the executor produced. RK-06 turns these into frozen Evidence v1 records; the executor never writes evidence itself."
+    },
+    "independent_validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "satisfied": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "validator_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        }
+      },
+      "description": "An executor's self-reported `succeeded` is not by itself sufficient evidence of success. When required is true and satisfied is not true, RK-01 must not emit SUCCESS."
+    },
+    "executor_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "description": "Recorded for audit ONLY, and recorded SEPARATELY from any provider reference. It is never routing authority, never caller-visible, and never appears in RuntimeRouteDecision."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "enum": [
+              "succeeded",
+              "failed",
+              "cancelled",
+              "timed_out"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "terminal": {
+            "const": true
+          }
+        },
+        "required": [
+          "terminal",
+          "telemetry"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "enum": [
+              "queued",
+              "running"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "terminal": {
+            "const": false
+          }
+        },
+        "required": [
+          "terminal"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "enum": [
+              "failed",
+              "timed_out"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "not": {
+              "type": "null"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "timed_out"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "error": {
+            "properties": {
+              "category": {
+                "const": "TIMEOUT"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "succeeded"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "error": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "x-ginkgo-contract-version": "v1",
+  "x-ginkgo-authority": "internal-runtime",
+  "x-ginkgo-authority-status": "INTRODUCED_BY_PR45",
+  "x-ginkgo-authority-note": "This contract becomes authority when ai-stack#45 merges. It is NOT authority in master today. It references contracts/core/* which ARE frozen in master, and it modifies none of them. Lifecycle semantics are normative in architecture/runtime/lifecycle-and-promotion.md section 3.",
+  "x-ginkgo-caller-surface": false,
+  "x-ginkgo-status-mapping": {
+    "description": "Applied by RK-01 Capability Bus when constructing CapabilityResult v1. queued and running are non-terminal and emit no result.",
+    "succeeded": {
+      "status": "SUCCESS",
+      "when_partial": "PARTIAL"
+    },
+    "failed": {
+      "status": "ERROR",
+      "error_category": "per failure class"
+    },
+    "timed_out": {
+      "status": "ERROR",
+      "error_category": "TIMEOUT"
+    },
+    "cancelled": {
+      "status": "BLOCKED",
+      "error_category": "POLICY or CONFLICT"
+    }
+  }
+}

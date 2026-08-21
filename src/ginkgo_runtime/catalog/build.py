@@ -51,9 +51,24 @@ def build_catalog(
     """
     resolved = default_root() if root is None else root
     manifest = load_manifest(resolved, manifest_path)
-    authority = load_frozen_authority(manifest.read)
-    admitted, rejected = project(load_raw_records(manifest), authority)
-    return build_snapshot(manifest, authority, admitted, rejected)
+
+    # The catalog's identity depends on what the catalog READ, not on everything
+    # the repository happens to pin. Other kernel components pin their own frozen
+    # contracts into the same manifest; without this, RK-01 adding a schema it
+    # validates against would change `catalog_version` -- a value RK-02 freezes
+    # into every routing decision -- with no change in what the catalog means.
+    consumed: set[str] = set()
+
+    def record(path: str) -> bytes:
+        consumed.add(path)
+        return manifest.read(path)
+
+    authority = load_frozen_authority(record)
+    projected = load_raw_records(manifest)
+    consumed.update(source.path for source in manifest.projected())
+
+    admitted, rejected = project(projected, authority)
+    return build_snapshot(manifest, authority, admitted, rejected, consumed)
 
 
 def rejection_report(catalog: RuntimeCatalog) -> dict[str, Any]:
