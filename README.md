@@ -2,7 +2,8 @@
 
 **Implementation of the Ginkgo Capability Runtime Kernel.**
 
-> Status: **RK-07 Runtime Catalog, RK-01 Capability Bus and RK-02 Domain Router implemented.**
+> Status: **RK-07 Runtime Catalog, RK-01 Capability Bus, RK-02 Domain Router and RK-04 Policy +
+> Lifecycle Gate implemented.**
 > This repository was designated as the kernel implementation host on 2026-08-20 (BLK-16). The
 > architecture it implements merged first: `ai-stack#45` (Capability Runtime Kernel v1) and
 > `ai-stack#47` (static P0 conformance).
@@ -29,8 +30,8 @@ Architecture and contracts are **not** owned here.
 | **RK-07 Runtime Catalog** | **implemented** | [`catalog/`](catalog/README.md) · [`src/ginkgo_runtime/catalog/`](src/ginkgo_runtime/catalog) |
 | **RK-01 Capability Bus** *(absorbs RK-05)* | **implemented** | [`src/ginkgo_runtime/bus/`](src/ginkgo_runtime/bus/README.md) |
 | **RK-02 Domain Router** *(absorbs RK-03)* | **implemented** | [`src/ginkgo_runtime/router/`](src/ginkgo_runtime/router/README.md) |
+| **RK-04 Policy + Lifecycle Gate** | **implemented** | [`src/ginkgo_runtime/gate/`](src/ginkgo_runtime/gate/README.md) |
 | RK-10 runtime conformance | not started | `ai-stack#38` |
-| RK-04 Policy + Lifecycle Gate | not started (port only) | `ai-stack#41` |
 | RK-08A Executor Contract | not started | `ai-stack#32` |
 | RK-09 `system.echo.execute` | not started | `ai-stack#42` |
 | RK-06 Evidence / Audit Writer | not started | `ai-stack#43` |

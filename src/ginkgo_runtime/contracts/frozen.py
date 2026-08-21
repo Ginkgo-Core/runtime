@@ -10,6 +10,8 @@ Everything the Capability Bus validates against is read out of the pinned
   ``contracts/runtime/runtime-execution-result.schema.json``
 * ``RuntimeRouteDecision v1`` --
   ``contracts/runtime/runtime-route-decision.schema.json``
+* ``Approval v1`` -- ``contracts/core/approval.schema.json``
+* ``ExternalGate v1`` -- ``contracts/core/external-gate.schema.json``
 * the executor-state to result-status mapping -- the same schema's
   ``x-ginkgo-status-mapping``
 
@@ -33,9 +35,11 @@ from typing import Any
 from .jsonschema import Validator
 
 __all__ = [
+    "APPROVAL",
     "CAPABILITY_REQUEST",
     "CAPABILITY_RESULT",
     "ERROR",
+    "EXTERNAL_GATE",
     "RUNTIME_EXECUTION_RESULT",
     "RUNTIME_ROUTE_DECISION",
     "ContractsUnavailableError",
@@ -48,6 +52,8 @@ CAPABILITY_RESULT = "contracts/core/capability-result.schema.json"
 ERROR = "contracts/core/error.schema.json"
 RUNTIME_EXECUTION_RESULT = "contracts/runtime/runtime-execution-result.schema.json"
 RUNTIME_ROUTE_DECISION = "contracts/runtime/runtime-route-decision.schema.json"
+APPROVAL = "contracts/core/approval.schema.json"
+EXTERNAL_GATE = "contracts/core/external-gate.schema.json"
 
 STATUS_MAPPING_KEY = "x-ginkgo-status-mapping"
 
@@ -107,6 +113,17 @@ class FrozenContracts:
     #: not written: a router that discovered the limit by emitting an oversized
     #: reason would fail its own artifact instead of explaining itself.
     routing_reason_max_length: int
+    #: ``state`` enums, read from the two frozen governance contracts. RK-04
+    #: admits against these and never against a tuple written in this package:
+    #: an unrecognised state is the whole reason the gate exists.
+    approval_states: tuple[str, ...]
+    external_gate_states: tuple[str, ...]
+    #: The frozen ``fallback_policy`` enum, from ``capability-request.schema.json``.
+    fallback_policies: tuple[str, ...]
+    #: The lifecycle ladder, from ``runtime-skill-descriptor.schema.json``.
+    lifecycle_statuses: tuple[str, ...]
+    #: ``execution_mode`` from ``runtime-route-decision.schema.json``.
+    execution_modes: tuple[str, ...]
     #: ``capability.name`` pattern, read from the frozen request schema and never
     #: written as a literal (``capability-runtime-kernel-v1.md`` section 5).
     capability_name_pattern: str
@@ -146,6 +163,8 @@ def load_frozen_contracts(read_source: Callable[[str], bytes]) -> FrozenContract
         ERROR,
         RUNTIME_EXECUTION_RESULT,
         RUNTIME_ROUTE_DECISION,
+        APPROVAL,
+        EXTERNAL_GATE,
     ):
         try:
             schemas[path] = json.loads(read_source(path).decode("utf-8"))
@@ -191,6 +210,33 @@ def load_frozen_contracts(read_source: Callable[[str], bytes]) -> FrozenContract
         runtime_execution_result=Validator(schemas[RUNTIME_EXECUTION_RESULT], resolver),
         runtime_route_decision=Validator(schemas[RUNTIME_ROUTE_DECISION], resolver),
         status_mapping=StatusMapping(by_state=by_state),
+        approval_states=tuple(
+            _dig(schemas[APPROVAL], ("properties", "state", "enum"), APPROVAL)
+        ),
+        external_gate_states=tuple(
+            _dig(schemas[EXTERNAL_GATE], ("properties", "state", "enum"), EXTERNAL_GATE)
+        ),
+        fallback_policies=tuple(
+            _dig(
+                schemas[CAPABILITY_REQUEST],
+                ("properties", "constraints", "properties", "fallback_policy", "enum"),
+                CAPABILITY_REQUEST,
+            )
+        ),
+        lifecycle_statuses=tuple(
+            _dig(
+                schemas[RUNTIME_ROUTE_DECISION],
+                ("properties", "lifecycle", "properties", "status", "enum"),
+                RUNTIME_ROUTE_DECISION,
+            )
+        ),
+        execution_modes=tuple(
+            _dig(
+                schemas[RUNTIME_ROUTE_DECISION],
+                ("properties", "execution_mode", "enum"),
+                RUNTIME_ROUTE_DECISION,
+            )
+        ),
         routing_reason_max_length=int(
             _dig(
                 schemas[RUNTIME_ROUTE_DECISION],

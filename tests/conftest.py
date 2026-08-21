@@ -315,3 +315,70 @@ def domain_router(catalog, contracts, policy=None):
 def routable(tmp_path, contracts):
     """A router over a one-record routable catalog."""
     return domain_router(routable_catalog(tmp_path), contracts)
+
+
+# ---------------------------------------------------------------------------
+# RK-04 Policy + Lifecycle Gate fixtures
+# ---------------------------------------------------------------------------
+
+
+def gate_record(status="VALIDATED", routing_eligible=None, production_eligible=False, **extra):
+    """A catalog record shaped the way RK-07 projects one.
+
+    ``routing_eligible`` defaults to whatever the stage's ceiling permits, so a
+    test that only names a stage gets the most permissive record that stage
+    allows -- which is what makes a BLOCK attributable to the stage rather than
+    to an incidentally restrictive flag.
+    """
+    from ginkgo_runtime.gate import CEILINGS
+
+    ceiling = CEILINGS.get(status, (False, False))
+    record = {
+        "record_id": "rk-reference-echo",
+        "lifecycle_status": status,
+        "fallback_policy": "none",
+        "side_effect_class": "local_transform",
+        "routing": {
+            "discoverable": True,
+            "routing_eligible": ceiling[0] if routing_eligible is None else routing_eligible,
+            "production_eligible": production_eligible,
+        },
+    }
+    record.update(extra)
+    return record
+
+
+def gate_policy(**overrides):
+    from ginkgo_runtime.gate import PolicyContext
+
+    defaults = {
+        "policy_id": "rk04-test-policy",
+        "policy_version": "1",
+        "decision": "ALLOW",
+        "snapshot": {"rules": [], "note": "supplied verdict; RK-04 evaluates no business rule"},
+    }
+    defaults.update(overrides)
+    return PolicyContext(**defaults)
+
+
+def gate_request(record=None, execution_mode="non_production", **overrides):
+    from ginkgo_runtime.gate import GateRequest
+
+    fields = {
+        "record": gate_record() if record is None else record,
+        "execution_mode": execution_mode,
+        "policy": gate_policy(),
+    }
+    fields.update(overrides)
+    return GateRequest(**fields)
+
+
+@pytest.fixture
+def gate(contracts):
+    """``evaluate`` bound to the pinned contracts."""
+    from ginkgo_runtime.gate import evaluate
+
+    def run(request):
+        return evaluate(request, contracts)
+
+    return run

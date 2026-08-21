@@ -3,6 +3,19 @@
   "schema_version": "ginkgo.runtime-catalog.source-manifest.v1",
   "sources": [
     {
+      "blob_sha": "2ba9ac3f2139a6f1b8a31ddfb7d34870d8fa4928",
+      "collection_key": null,
+      "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
+      "path": "contracts/core/approval.schema.json",
+      "record_class": null,
+      "ref": "master",
+      "repo": "Ginkgo-Core/ai-stack",
+      "role": "authority",
+      "sha256": "42a3d9e0bc14e085655c4f6ae60ec8410b4a7cdd28594a628a52aa00aa8b7a80",
+      "size_bytes": 1684,
+      "snapshot_path": "catalog/sources/ai-stack/contracts/core/approval.schema.json"
+    },
+    {
       "blob_sha": "a161b1ed843decca2512288e730c3890b6797ecc",
       "collection_key": null,
       "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
@@ -40,6 +53,19 @@
       "sha256": "dc97cb0e579eaa959fc4a6b3a2dd70f6753f29e82c5129607c30eab325bd7c12",
       "size_bytes": 908,
       "snapshot_path": "catalog/sources/ai-stack/contracts/core/error.schema.json"
+    },
+    {
+      "blob_sha": "496b888235f1c0a4f23898aa851a7c3a0756655b",
+      "collection_key": null,
+      "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
+      "path": "contracts/core/external-gate.schema.json",
+      "record_class": null,
+      "ref": "master",
+      "repo": "Ginkgo-Core/ai-stack",
+      "role": "authority",
+      "sha256": "feb1f81a477ac1a03ea890b0d60488dbcfafa788d42b171821524cb96db316fe",
+      "size_bytes": 1546,
+      "snapshot_path": "catalog/sources/ai-stack/contracts/core/external-gate.schema.json"
     },
     {
       "blob_sha": "38243f3f524bd23b43506576c3c387747f45eb3e",
