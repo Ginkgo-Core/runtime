@@ -266,7 +266,9 @@ def test_invariant_5_an_approval_never_clears_a_gate(tmp_path, contracts, gate_s
     decision = router.route(capability_request(), routing_context())
 
     assert outcome_of(decision) == "BLOCKED_EXTERNAL_GATE"
-    assert "invariant 5" in decision["routing_reason"]
+    # The reason is asserted by its stable CODE rather than by prose. RK-04 owns
+    # the wording; the router records it.
+    assert decision["routing_reason"].startswith("EXTERNAL_GATE_NOT_CLEAR:")
 
 
 def test_a_clear_gate_does_not_block(tmp_path, contracts):

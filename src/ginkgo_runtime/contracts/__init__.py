@@ -7,9 +7,11 @@ schema is restated in Python anywhere in this package.
 from __future__ import annotations
 
 from .frozen import (
+    APPROVAL,
     CAPABILITY_REQUEST,
     CAPABILITY_RESULT,
     ERROR,
+    EXTERNAL_GATE,
     RUNTIME_EXECUTION_RESULT,
     RUNTIME_ROUTE_DECISION,
     ContractsUnavailableError,
@@ -20,9 +22,11 @@ from .frozen import (
 from .jsonschema import SchemaViolation, UnsupportedSchemaError, Validator, schema_keywords
 
 __all__ = [
+    "APPROVAL",
     "CAPABILITY_REQUEST",
     "CAPABILITY_RESULT",
     "ERROR",
+    "EXTERNAL_GATE",
     "RUNTIME_EXECUTION_RESULT",
     "RUNTIME_ROUTE_DECISION",
     "ContractsUnavailableError",

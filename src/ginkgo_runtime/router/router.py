@@ -57,6 +57,9 @@ from typing import Any
 
 from ..catalog.snapshot import RuntimeCatalog
 from ..contracts import FrozenContracts
+from ..gate import ApprovalState, ConstraintContext, ExternalGateState, GateRequest
+from ..gate import PolicyContext as GatePolicyContext
+from ..gate import evaluate as gate_evaluate
 from .decision import (
     ALGORITHM_VERSION,
     SCHEMA_VERSION,
@@ -147,8 +150,6 @@ class DomainRouter:
         descriptor, outcome, reason = self._resolve_descriptor(name, version)
 
         lifecycle = self._lifecycle(descriptor)
-        if descriptor is not None and outcome is None:
-            outcome, reason = self._lifecycle_guard(lifecycle, context)
 
         verdict = self._ask_policy(
             PolicyQuestion(
@@ -165,8 +166,14 @@ class DomainRouter:
         )
         policy_block = self._policy_block(verdict)
 
-        if outcome is None:
-            outcome, reason = self._policy_guard(verdict)
+        if descriptor is not None and outcome is None:
+            # RK-04 decides; RK-02 records. The section 3 matrix, the approval
+            # rules and the gate independence rule all live in the gate, once.
+            gate = self._gate(descriptor, verdict, request, context)
+            policy_block["decision"] = gate.policy_decision
+            if not gate.allowed:
+                outcome = gate.outcome
+                reason = "%s: %s" % (gate.reason_code, gate.reason)
 
         if outcome is None:
             outcome, reason = self._pin_guard(descriptor)
@@ -242,47 +249,53 @@ class DomainRouter:
             "status": str(descriptor["lifecycle_status"]),
         }
 
-    def _lifecycle_guard(self, lifecycle: Mapping[str, Any] | None, context: RoutingContext):
-        """The section 3 matrix, applied per mode. Nothing here grants anything."""
-        assert lifecycle is not None
-        status = lifecycle["status"]
-        mode = context.execution_mode
+    def _gate(self, descriptor, verdict, request, context: RoutingContext):
+        """Ask RK-04. This router applies no lifecycle or governance rule of its own.
 
-        if status in NEVER_ROUTABLE_STATUSES:
-            return "BLOCKED_LIFECYCLE", (
-                "lifecycle_status %s is terminal and is not routable in any mode, "
-                "certification included" % status
-            )
+        ``capability-runtime-kernel-v1.md`` section 5: *"RK-04 decides; RK-02
+        records the pinned verdict and stops. The BLOCKED_POLICY,
+        BLOCKED_APPROVAL and BLOCKED_EXTERNAL_GATE outcomes on
+        RuntimeRouteDecision are RK-02 reporting RK-04's decision in the audit
+        record, never RK-02 re-deciding it."*
 
-        if mode in CALLER_TRAFFIC_MODES and status in NO_CALLER_TRAFFIC_STATUSES:
-            return "BLOCKED_LIFECYCLE", (
-                "lifecycle_status %s may be certified but may not serve caller "
-                "traffic in %s" % (status, mode)
-            )
-
-        if mode == "certification":
-            # Neither eligibility flag is consulted; the governance is the
-            # recorded authorization instead.
-            if not context.certification_authorization_ref:
-                return "BLOCKED_LIFECYCLE", (
-                    "certification mode requires a recorded certification "
-                    "authorization naming the skill, the mode and the gate; "
-                    "without one it would be an unaudited bypass of the ladder"
-                )
-            return None, ""
-
-        if not lifecycle["routing_eligible"]:
-            return "BLOCKED_LIFECYCLE", (
-                "lifecycle_status %s is not routing_eligible, so it cannot serve "
-                "%s traffic" % (status, mode)
-            )
-
-        if mode == "production" and not lifecycle["production_eligible"]:
-            return "BLOCKED_LIFECYCLE", (
-                "lifecycle_status %s is not production_eligible" % status
-            )
-
-        return None, ""
+        An earlier revision of this router carried its own copy of the section 3
+        matrix and its own approval/gate precedence. Two copies of a normative
+        table is the drift the architecture keeps warning about, so the copy here
+        was removed rather than kept in sync.
+        """
+        constraints = request.get("constraints") or {}
+        return gate_evaluate(
+            GateRequest(
+                record=descriptor,
+                execution_mode=context.execution_mode,
+                policy=GatePolicyContext(
+                    policy_id=verdict.policy_id,
+                    policy_version=verdict.policy_version,
+                    decision=verdict.decision,
+                    snapshot=verdict.snapshot,
+                ),
+                approval=ApprovalState(
+                    required=bool(verdict.approval_required),
+                    state=verdict.approval_state,
+                    refs=tuple(verdict.approval_refs),
+                ),
+                external_gates=tuple(
+                    ExternalGateState(
+                        gate_id=str(gate.get("gate_id")),
+                        state=str(gate.get("state")),
+                        gate_type=gate.get("gate_type"),
+                    )
+                    for gate in verdict.external_gates
+                ),
+                constraints=ConstraintContext(
+                    deadline=constraints.get("deadline"),
+                    max_cost=constraints.get("max_cost"),
+                    data_classification=constraints.get("data_classification"),
+                ),
+                certification_authorization_ref=context.certification_authorization_ref,
+            ),
+            self.contracts,
+        )
 
     # -- step 3: policy ---------------------------------------------------
 
@@ -340,39 +353,6 @@ class DomainRouter:
         if verdict.approval_refs:
             block["approval"]["approval_refs"] = list(verdict.approval_refs)
         return block
-
-    def _policy_guard(self, verdict):
-        """Report RK-04's verdict. This router re-decides nothing.
-
-        The precedence -- denial, then gates, then approval -- is fixed so the
-        outcome code is deterministic when more than one applies. Gates sit above
-        approval because invariant 5 makes a gate un-clearable *by* an approval:
-        ``APPROVED + BLOCKED => BLOCKED`` and ``APPROVED + UNKNOWN => BLOCKED``.
-        Reporting ``BLOCKED_APPROVAL`` there would name the wrong cause and
-        suggest an approval would fix it.
-        """
-        if not verdict.allowed:
-            return "BLOCKED_POLICY", "policy %s v%s returned DENY" % (
-                verdict.policy_id,
-                verdict.policy_version,
-            )
-
-        blocking = verdict.blocking_gates()
-        if blocking:
-            named = ", ".join(
-                "%s=%s" % (gate.get("gate_id"), gate.get("state")) for gate in blocking
-            )
-            return "BLOCKED_EXTERNAL_GATE", (
-                "external gate(s) not CLEAR: %s. An approval never clears a gate "
-                "(invariant 5)" % named
-            )
-
-        if verdict.approval_blocks:
-            return "BLOCKED_APPROVAL", (
-                "approval is required and its state is %s" % verdict.approval_state
-            )
-
-        return None, ""
 
     # -- step 4: the pin --------------------------------------------------
 

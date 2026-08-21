@@ -80,6 +80,13 @@ def test_nothing_in_the_pinned_catalog_routes_in_any_mode(pinned_router, mode):
 
 
 def test_the_reason_a_feature_binding_cannot_route_names_its_lifecycle(pinned_router):
+    """And names the *matrix cell*, not the eligibility flag.
+
+    The router used to attribute this block to ``routing_eligible: false``. RK-04
+    is more precise: the section 3 matrix marks ``FEATURE`` as "no" in
+    ``non_production`` outright, so the record would be denied even if it declared
+    the flag true. Blaming the flag suggested a fix that would not work.
+    """
     decision = pinned_router.route(
         capability_request(
             capability={"name": "commerce.catalog.search", "contract_version": "v1"}
@@ -87,8 +94,9 @@ def test_the_reason_a_feature_binding_cannot_route_names_its_lifecycle(pinned_ro
         routing_context(execution_mode="non_production"),
     )
     assert decision["resolved"]["outcome"] == "BLOCKED_LIFECYCLE"
+    assert decision["routing_reason"].startswith("LIFECYCLE_MODE_DENIED:")
     assert "FEATURE" in decision["routing_reason"]
-    assert "routing_eligible" in decision["routing_reason"]
+    assert "non_production" in decision["routing_reason"]
 
 
 def test_certification_reaches_the_pin_guard_and_stops_there(pinned_router):
