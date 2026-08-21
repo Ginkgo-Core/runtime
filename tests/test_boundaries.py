@@ -102,7 +102,11 @@ def test_no_free_text_provider_or_tool_tag_became_a_capability(catalog):
         for record in catalog.skills
         if record["capability"] is not None
     }
-    assert named <= declared
+    # `system.*` is a reserved kernel-diagnostics namespace and has no record in
+    # `ginkgo-library`'s registry -- deliberately, since it is not a business
+    # domain. Every OTHER capability a skill names is one the registry declares.
+    business = {name for name in named if not name.startswith("system.")}
+    assert business <= declared
     for name in declared | named:
         assert len(name.split(".")) >= 3
 
@@ -336,7 +340,68 @@ def test_the_vendored_bytes_are_byte_identical_to_github():
 
     assert staged, "no pinned sources are tracked"
     for entry in manifest["sources"]:
+        if entry["role"] == "kernel":
+            # Owned by this repository; there is no upstream blob to compare to.
+            # Its integrity is enforced by the manifest's sha256 like every other
+            # source, and `test_a_kernel_source_is_still_integrity_checked` covers it.
+            continue
         assert staged.get(entry["snapshot_path"]) == entry["blob_sha"], (
             "%s is stored as a different blob than %s@%s declares"
             % (entry["snapshot_path"], entry["repo"], entry["commit_sha"])
         )
+
+
+def test_a_kernel_source_is_still_integrity_checked():
+    """A kernel-owned source has no upstream commit and is still pinned.
+
+    ``role: kernel`` relaxes exactly one thing -- ``commit_sha`` is null, because
+    the file lives at this repository's HEAD, which git already pins. The content
+    digest is enforced on every build exactly as it is for an upstream source, so
+    the file cannot drift unnoticed.
+    """
+    import pytest
+
+    from ginkgo_runtime.catalog.errors import SourceIntegrityError
+
+    manifest = load_manifest(REPO_ROOT)
+    kernel = [source for source in manifest.sources if source.role == "kernel"]
+    assert kernel, "the reference descriptor should be a kernel source"
+
+    for source in kernel:
+        assert source.commit_sha == ""
+        assert sha256_hex(manifest.read_source(source)) == source.sha256
+        assert source.source_ref.startswith("Ginkgo-Core/ginkgo-runtime@blob:")
+
+    tampered = dataclasses.replace(kernel[0], sha256="0" * 64)
+    with pytest.raises(SourceIntegrityError):
+        manifest.read_source(tampered)
+
+
+def test_a_kernel_source_may_not_carry_a_commit(tmp_path):
+    """An upstream source with no commit would be an unpinned projection.
+
+    That is why the role is separate rather than ``projected`` with a nullable
+    commit: the relaxation must not reach an upstream pin.
+    """
+    import json
+
+    import pytest
+
+    from ginkgo_runtime.catalog.errors import CatalogBuildError
+
+    descriptor = "id: x\nkind: provider_binding\n"
+    root = make_snapshot(
+        tmp_path, [("features/one.yaml", "skill_descriptor", None, descriptor)]
+    )
+    path = os.path.join(root, "catalog", "sources.manifest.json")
+    with open(path, encoding="utf-8") as handle:
+        document = json.load(handle)
+    for entry in document["sources"]:
+        if entry["role"] == "projected":
+            entry["role"] = "kernel"
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        json.dump(document, handle, indent=2)
+
+    with pytest.raises(CatalogBuildError) as excinfo:
+        build_catalog(root)
+    assert "commit_sha: null" in str(excinfo.value)

@@ -35,7 +35,7 @@ def test_the_committed_catalog_carries_its_own_version():
     with open(os.path.join(REPO_ROOT, *CATALOG_ARTIFACT.split("/")), encoding="utf-8") as fh:
         document = json.load(fh)
     assert document["catalog_version"] == "rkc1-%s" % document["catalog_hash"][:16]
-    assert len(document["capabilities"]) + len(document["skills"]) == 20
+    assert len(document["capabilities"]) + len(document["skills"]) == 21
     assert len(document["rejections"]) == 37
 
 

@@ -53,6 +53,9 @@ ERROR = "contracts/core/error.schema.json"
 RUNTIME_EXECUTION_RESULT = "contracts/runtime/runtime-execution-result.schema.json"
 RUNTIME_ROUTE_DECISION = "contracts/runtime/runtime-route-decision.schema.json"
 APPROVAL = "contracts/core/approval.schema.json"
+EVIDENCE = "contracts/core/evidence.schema.json"
+EVENT = "contracts/core/event.schema.json"
+RUNTIME_EXECUTION_REQUEST = "contracts/runtime/runtime-execution-request.schema.json"
 EXTERNAL_GATE = "contracts/core/external-gate.schema.json"
 
 STATUS_MAPPING_KEY = "x-ginkgo-status-mapping"
@@ -101,8 +104,11 @@ class FrozenContracts:
     capability_request: Validator
     capability_result: Validator
     error: Validator
+    runtime_execution_request: Validator
     runtime_execution_result: Validator
     runtime_route_decision: Validator
+    evidence: Validator
+    event: Validator
     status_mapping: StatusMapping
     #: ``x-ginkgo-forbidden-fields`` from the route-decision contract: the field
     #: names that must never appear on a decision. ``ranked_fallbacks`` and
@@ -165,6 +171,9 @@ def load_frozen_contracts(read_source: Callable[[str], bytes]) -> FrozenContract
         RUNTIME_ROUTE_DECISION,
         APPROVAL,
         EXTERNAL_GATE,
+        EVIDENCE,
+        EVENT,
+        RUNTIME_EXECUTION_REQUEST,
     ):
         try:
             schemas[path] = json.loads(read_source(path).decode("utf-8"))
@@ -207,7 +216,10 @@ def load_frozen_contracts(read_source: Callable[[str], bytes]) -> FrozenContract
         capability_request=Validator(schemas[CAPABILITY_REQUEST], resolver),
         capability_result=Validator(schemas[CAPABILITY_RESULT], resolver),
         error=Validator(schemas[ERROR], resolver),
+        runtime_execution_request=Validator(schemas[RUNTIME_EXECUTION_REQUEST], resolver),
         runtime_execution_result=Validator(schemas[RUNTIME_EXECUTION_RESULT], resolver),
+        evidence=Validator(schemas[EVIDENCE], resolver),
+        event=Validator(schemas[EVENT], resolver),
         runtime_route_decision=Validator(schemas[RUNTIME_ROUTE_DECISION], resolver),
         status_mapping=StatusMapping(by_state=by_state),
         approval_states=tuple(

@@ -18,6 +18,9 @@ PINS = {
     "Ginkgo-Core/ai-stack": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
     "Ginkgo-Core/ginkgo-agents": "89247220ffa15238cff209dba13088eae1a1a641",
     "Ginkgo-Core/ginkgo-library": "a9943567458f94a4737c2b08bd441e9aff01071f",
+    # Kernel-owned: RK-09's reference descriptor, pinned by content rather than
+    # by an upstream commit. See `role: kernel` in manifest.py.
+    "Ginkgo-Core/ginkgo-runtime": "",
 }
 
 #: ``ai-stack#37``, verbatim: the ten sub-3-segment capability IDs on
@@ -53,15 +56,15 @@ def test_the_pins_are_the_audited_commits(catalog):
 
 def test_every_record_is_either_admitted_or_named(catalog):
     """Nothing disappears. The two sets partition the corpus exactly."""
-    assert catalog.admitted_count == 20
+    assert catalog.admitted_count == 21
     assert catalog.rejected_count == 37
-    assert catalog.admitted_count + catalog.rejected_count == 57
+    assert catalog.admitted_count + catalog.rejected_count == 58
 
     identities = {
         (str(r["record_class"]), str(r["record_ref"]))
         for r in list(catalog.capabilities) + list(catalog.skills)
     } | {(str(r["record_class"]), str(r["record_ref"])) for r in catalog.rejections}
-    assert len(identities) == 57
+    assert len(identities) == 58
 
 
 def test_exactly_the_published_ten_capabilities_fail_the_name_pattern(catalog):
@@ -193,17 +196,19 @@ def test_no_ginkgo_agents_record_carries_the_legacy_approval_field(catalog):
 
 
 def test_the_admitted_skills_are_the_conformant_agents_descriptors(catalog):
-    """Only ``ginkgo-agents/features/`` currently authors a contract-shaped record."""
+    """``ginkgo-agents/features/`` plus the kernel's own reference descriptor."""
     assert {str(record["record_id"]) for record in catalog.skills} == {
         "amazon-spapi.catalog.search",
         "amazon-spapi.inventory.read",
         "amazon-spapi.orders.read",
         "amazon-spapi.pricing.read",
+        "rk-reference-echo",
         "shopee-open-api.catalog.read",
         "shopee-open-api.orders.read",
         "shopee.product.normalize",
     }
-    assert all("ginkgo-agents" in str(r["source_ref"]) for r in catalog.skills)
+    upstream = [r for r in catalog.skills if r["record_id"] != "rk-reference-echo"]
+    assert all("ginkgo-agents" in str(r["source_ref"]) for r in upstream)
 
 
 def test_the_ginkgo_library_twins_are_excluded_for_a_missing_contract_version(catalog):
@@ -225,14 +230,29 @@ def test_the_ginkgo_library_twins_are_excluded_for_a_missing_contract_version(ca
     # set is larger by one: `commerce.product.evaluate` is excluded on both sides,
     # its library twin for the missing contract version and its ginkgo-agents record
     # for the taxonomy collision.
-    assert {str(record["record_id"]) for record in twins} == {
-        str(record["record_id"]) for record in catalog.skills
-    } | {"commerce.product.evaluate"}
+    # `rk-reference-echo` is kernel-owned and has no `ginkgo-library` twin.
+    assert {str(record["record_id"]) for record in twins} == (
+        {str(record["record_id"]) for record in catalog.skills}
+        - {"rk-reference-echo"}
+    ) | {"commerce.product.evaluate"}
     assert not any(
         r["code"] == "DUPLICATE_RECORD_ID"
         for record in catalog.rejections
         for r in record["reasons"]
     )
+
+
+def test_the_reference_descriptor_is_the_only_complete_record(catalog):
+    """Stated as a fact about the corpus rather than left implicit.
+
+    Every upstream descriptor predates the full contract; RK-09's does not.
+    """
+    complete = sorted(
+        str(record["record_id"])
+        for record in catalog.skills
+        if not record["descriptor_gaps"]
+    )
+    assert complete == ["rk-reference-echo"]
 
 
 def test_nothing_in_the_catalog_is_routable_or_production_eligible(catalog):
@@ -256,6 +276,12 @@ def test_the_descriptor_gaps_are_reported_on_every_admitted_record(catalog):
     way down, so a consumer cannot append to a record's gap list either.
     """
     for record in catalog.skills:
+        if record["record_id"] == "rk-reference-echo":
+            # The reference descriptor is the only complete record in the whole
+            # corpus -- which is the point of it, and a fair summary of how far
+            # the registries still have to go.
+            assert record["descriptor_gaps"] == ()
+            continue
         assert record["descriptor_gaps"] == ("schema_version", "side_effect_class")
 
 

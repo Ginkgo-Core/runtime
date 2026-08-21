@@ -41,14 +41,28 @@ def capabilities_in(router):
     return sorted(str(record["record_id"]) for record in router.catalog.capabilities)
 
 
-def test_no_admitted_descriptor_declares_a_side_effect_class(pinned_router):
-    """Reason 1, stated as a fact about the corpus."""
-    declared = {record["side_effect_class"] for record in pinned_router.catalog.skills}
-    assert declared == {None}
+def test_only_the_reference_descriptor_declares_a_side_effect_class(pinned_router):
+    """Reason 1, narrowed to what is still true.
+
+    Not one *upstream* descriptor declares it. RK-09's reference descriptor does,
+    which is what lets the slice route at all -- and it is the only record in the
+    corpus that can.
+    """
+    declared = {
+        str(record["record_id"]): record["side_effect_class"]
+        for record in pinned_router.catalog.skills
+    }
+    assert declared.pop("rk-reference-echo") == "local_transform"
+    assert set(declared.values()) == {None}
 
 
 def test_no_admitted_descriptor_is_routing_eligible(pinned_router):
-    """Reason 2."""
+    """Reason 2 -- and it holds for the reference descriptor too.
+
+    ``routing_eligible`` stays false until RK-10 emits the certificate. The
+    reference skill is subject to exactly the same lifecycle law as a business
+    skill; that is the point of it.
+    """
     for record in pinned_router.catalog.skills:
         assert record["routing"]["routing_eligible"] is False
         assert record["routing"]["production_eligible"] is False
@@ -138,7 +152,7 @@ def test_a_capability_with_two_bindings_is_ambiguous_rather_than_ranked(pinned_r
 def test_a_capability_the_catalog_never_heard_of_is_unknown(pinned_router):
     decision = pinned_router.route(
         capability_request(
-            capability={"name": "system.echo.execute", "contract_version": "v1"}
+            capability={"name": "diagnostics.echo.execute", "contract_version": "v1"}
         ),
         routing_context(),
     )

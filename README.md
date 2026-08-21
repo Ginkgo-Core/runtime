@@ -2,8 +2,8 @@
 
 **Implementation of the Ginkgo Capability Runtime Kernel.**
 
-> Status: **RK-07 Runtime Catalog, RK-01 Capability Bus, RK-02 Domain Router and RK-04 Policy +
-> Lifecycle Gate implemented.**
+> Status: **Wave 1 kernel complete and running end to end.** RK-07, RK-01, RK-02, RK-04, RK-08A,
+> RK-09 and RK-06 are implemented, and RK-10's E2E certificate is emitted from a real run.
 > This repository was designated as the kernel implementation host on 2026-08-20 (BLK-16). The
 > architecture it implements merged first: `ai-stack#45` (Capability Runtime Kernel v1) and
 > `ai-stack#47` (static P0 conformance).
@@ -31,10 +31,11 @@ Architecture and contracts are **not** owned here.
 | **RK-01 Capability Bus** *(absorbs RK-05)* | **implemented** | [`src/ginkgo_runtime/bus/`](src/ginkgo_runtime/bus/README.md) |
 | **RK-02 Domain Router** *(absorbs RK-03)* | **implemented** | [`src/ginkgo_runtime/router/`](src/ginkgo_runtime/router/README.md) |
 | **RK-04 Policy + Lifecycle Gate** | **implemented** | [`src/ginkgo_runtime/gate/`](src/ginkgo_runtime/gate/README.md) |
-| RK-10 runtime conformance | not started | `ai-stack#38` |
-| RK-08A Executor Contract | not started | `ai-stack#32` |
-| RK-09 `system.echo.execute` | not started | `ai-stack#42` |
-| RK-06 Evidence / Audit Writer | not started | `ai-stack#43` |
+| **RK-08A Executor Contract** | **implemented** | [`src/ginkgo_runtime/executor/`](src/ginkgo_runtime/executor) |
+| **RK-09 `system.echo.execute`** | **implemented** | [`slice/`](slice/README.md) |
+| **RK-06 Evidence / Audit Writer** | **implemented** | [`src/ginkgo_runtime/evidence/`](src/ginkgo_runtime/evidence) |
+| **RK-10 E2E certificate** | **implemented** | [`slice/e2e-certificate.json`](slice/e2e-certificate.json) |
+| RK-08B n8n bridge | deferred to Wave 2 | `ai-stack#44` |
 
 ### Quick start
 
@@ -42,6 +43,7 @@ Architecture and contracts are **not** owned here.
 pip install -r requirements-dev.txt
 PYTHONPATH=src python -m ginkgo_runtime.catalog build
 PYTHONPATH=src python -m ginkgo_runtime.catalog reject     # the migration backlog
+PYTHONPATH=src python -m ginkgo_runtime.slice run          # the reference slice, end to end
 python -m pytest tests -q
 ```
 

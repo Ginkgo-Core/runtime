@@ -530,19 +530,30 @@ class DomainRouter:
         """
         seen: dict[str, str] = {}
         for source in self.catalog.pinned_sources:
-            seen.setdefault(str(source["repo"]), str(source["commit_sha"]))
+            commit = str(source["commit_sha"] or "")
+            if not commit:
+                # A kernel-owned source has no upstream commit, and the frozen
+                # schema requires 40 hex here. Its content still reaches
+                # `catalog_version`, which this decision carries, so
+                # reproducibility holds through that rather than through a
+                # commit that does not exist.
+                continue
+            seen.setdefault(str(source["repo"]), commit)
         return [
             {"repository": repo, "commit": commit, "path": None}
             for repo, commit in sorted(seen.items())
         ]
 
 
-def to_route_view(decision: Mapping[str, Any]):
+def to_route_view(decision: Mapping[str, Any], evidence_refs: tuple[str, ...] = ()):
     """Project a decision into the read-only slice RK-01 consumes.
 
     The seam between the two components, and it is narrow on purpose: RK-01 needs
     identity and routing provenance to build a ``CapabilityResult``, and nothing
     else in the decision is its business.
+
+    ``evidence_refs`` is supplied by whatever wrote the evidence -- RK-06, not
+    this router, which persists nothing.
     """
     from ..bus import RouteView
 
@@ -563,4 +574,5 @@ def to_route_view(decision: Mapping[str, Any]):
         # view hands over the decision's spelling unchanged.
         approval={"required": approval["required"], "status": approval["state"]},
         external_gates=tuple(dict(gate) for gate in policy.get("external_gates") or ()),
+        evidence_refs=evidence_refs,
     )
