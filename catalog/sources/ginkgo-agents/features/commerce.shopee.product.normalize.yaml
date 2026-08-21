@@ -1,0 +1,183 @@
+# Implementation Binding Contract — shopee.product.normalize
+id: shopee.product.normalize
+legacy_aliases:
+  - id: commerce.shopee.product.normalize
+    deprecated: true
+    replacement: shopee.product.normalize
+    public_capability: false
+  - id: shopee-open-api.product.normalize
+    deprecated: true
+    replacement: shopee.product.normalize
+    public_capability: false
+    reason: implementation_is_local_payload_normalization_not_open_api_execution
+version: 0.1.0
+kind: implementation_binding
+lifecycle_status: FEATURE
+maturity: F1
+phase: PRE_APPROVAL
+level: L1
+autonomy_level: A1
+status: feature
+
+purpose: >
+  Implement the provider-agnostic commerce.product.normalize capability by
+  deterministically transforming an already supplied Shopee-format product payload
+  into the canonical Commerce product shape. This binding performs no marketplace
+  request, network access, mutation, economic evaluation or publication.
+
+capability:
+  name: commerce.product.normalize
+  contract_version: v1
+
+caller_contract:
+  request: CapabilityRequest v1
+  request_schema_ref: Ginkgo-Core/ai-stack/contracts/core/capability-request.schema.json
+  result: CapabilityResult v1
+  result_schema_ref: Ginkgo-Core/ai-stack/contracts/core/capability-result.schema.json
+  caller_selects: [capability.name, capability.contract_version]
+  domain_router_resolves: [skill_id, skill_version, adapter, provider]
+
+implementation_binding:
+  skill_id: shopee.product.normalize
+  skill_version: 0.1.0
+  tool_id: amazon-ops-shopee-normalizer
+  implementation_ref: Scale-Characters/amazon-ops#2:integrations/shopee/catalog.py#normalize_product
+  source_payload_format: shopee
+  deterministic_local_transform: true
+  adapter_id: null
+  provider: null
+  adapter_not_applicable_reason: no_distinct_adapter_boundary_is_required_or_proven_for_the_local_transform
+  provider_not_applicable_reason: local_deterministic_transformation_does_not_call_an_external_provider
+  internal_routing_metadata: true
+
+use_when:
+  - shopee_payload_requires_canonical_product_shape
+  - offline_fixture_validation
+  - authorized_payload_is_already_available_for_normalization
+  - post_read_normalization_after_separate_live_acquisition
+
+avoid_when:
+  - source_payload_is_not_shopee_format
+  - shopee_payload_must_first_be_acquired_from_the_marketplace
+  - product_matching_between_marketplaces_is_required
+  - economic_evaluation_is_required
+  - publication_or_inventory_mutation_is_required
+
+inputs:
+  required:
+    - shop_ref
+    - raw_product
+  optional:
+    - provenance.observed_at
+    - provenance.source_ref
+  forbidden:
+    - skill_id
+    - skill_version
+    - binding
+    - binding_id
+    - tool
+    - tool_id
+    - provider
+    - adapter
+    - endpoint
+    - credential
+    - secret
+    - mutation
+    - evaluation_thresholds
+
+outputs:
+  contract: CapabilityResult v1
+  data_contract: commerce-product.v1
+  fields:
+    - source
+    - external_id
+    - shop_ref
+    - title
+    - description
+    - category_ref
+    - media
+    - price
+    - stock
+    - variants
+    - weight
+    - attributes
+    - status
+    - provenance
+
+permissions:
+  external_network: false
+  marketplace_read: []
+  marketplace_write: []
+  pii: none
+  filesystem_write: none
+  shell: false
+  secrets:
+    caller_access: forbidden
+    adapter_managed_refs: []
+
+approval:
+  required: false
+  status: NOT_REQUIRED
+
+# The normalization capability itself has no external gate because it consumes an
+# already supplied payload and performs no network access.
+external_gates: []
+
+upstream_live_payload_gate:
+  id: shopee_business_approval
+  applies_to: shopee_live_payload_acquisition
+  required_for_local_normalization: false
+  required_for_live_payload_acquisition: true
+  current_state: UNKNOWN
+  source_ref: Scale-Characters/amazon-ops#2@bccfc0f5142f432f889158870c8f9e26e353fa65
+  approval_cannot_override_external_gate: true
+  note: >
+    The gate must be CLEAR before obtaining a governed live Shopee payload, but it
+    is not inherited as an execution blocker by deterministic normalization of an
+    already supplied fixture or authorized payload.
+
+execution_mode: autonomous
+routing:
+  routing_eligible: false
+  execution_scope: offline_fixture_only
+  production_eligible: false
+  external_network_required: false
+  reason: feature_lifecycle_and_live_payload_contract_validation_missing
+
+fallback_policy: none
+
+validation:
+  canonical_evidence:
+    source: Scale-Characters/amazon-ops#2
+    head: bccfc0f5142f432f889158870c8f9e26e353fa65
+    github_actions_run: 32169677496
+    ruff: PASS
+    shopee_offline: 28_passed
+    general_suite: 104_passed_1_deselected
+    windows_linux_diagnostic: 1_expected_failure_non_blocking
+    credentials_in_ci: none
+    mutations: OFF
+    live_shopee: OFF
+    live_provider_validation_proven: false
+  evidence:
+    - "amazon-ops#2 implements integrations/shopee/catalog.py#normalize_product as a deterministic local Python function"
+    - "the normalizer receives a payload and shop_id directly; it performs no ShopeeClient network call"
+    - "amazon-ops#2 GitHub Actions validates the Shopee pre-approval implementation offline on the pinned head"
+    - "no approved live Shopee payload has been used to validate the canonical Commerce normalization contract"
+  blockers:
+    - no_governed_live_payload_fixture_comparison
+    - canonical_commerce_product_schema_not_yet_validated_against_governed_live_payload
+
+promotion:
+  allowed: false
+  lifecycle_ceiling: FEATURE
+  phase_ceiling: PRE_APPROVAL
+  requires:
+    - shopee_business_approval_gate_CLEAR_for_live_payload_acquisition
+    - one_sanitized_read_only_live_product_payload
+    - live_payload_vs_normalized_contract_test
+    - canonical_schema_review
+    - evidence_registered_in_github
+    - reviewer_approval
+
+owner_domain: commerce

@@ -1,0 +1,164 @@
+# Domain Skill Contract — commerce.product.evaluate
+id: commerce.product.evaluate
+version: 0.1.0
+kind: deterministic_domain_skill
+lifecycle_status: PROTOTYPE
+maturity: F2
+level: L2
+autonomy_level: A1
+status: prototype
+
+purpose: >
+  Evaluate a normalized commerce candidate against deterministic matching,
+  compliance and economic gates and return an advisory domain decision with evidence.
+  This skill never authorizes publication, purchase or marketplace mutation.
+
+capability:
+  name: commerce.product.evaluate
+  contract_version: v1
+
+caller_contract:
+  request: CapabilityRequest v1
+  request_schema_ref: Ginkgo-Core/ai-stack/contracts/core/capability-request.schema.json
+  result: CapabilityResult v1
+  result_schema_ref: Ginkgo-Core/ai-stack/contracts/core/capability-result.schema.json
+  caller_selects: [capability.name, capability.contract_version]
+  domain_router_resolves: [skill_id, skill_version, adapter, provider]
+
+implementation_binding:
+  skill_id: commerce.product.evaluate
+  skill_version: 0.1.0
+  provider_neutral: true
+  deterministic_domain_logic: true
+  adapter_id: null
+  provider: null
+  internal_routing_metadata: true
+
+use_when:
+  - normalized_candidate_requires_deterministic_evaluation
+  - target_price_and_delivered_source_cost_are_available
+  - caller_needs_economic_decision_with_reasons_and_evidence
+
+avoid_when:
+  - required_economic_inputs_are_missing_and_caller_requires_final_decision
+  - cross_marketplace_product_match_has_not_been_established
+  - caller_expects_purchase_or_listing_authorization
+  - caller_wants_to_override_governed_thresholds
+
+inputs:
+  required:
+    - candidate
+    - target_marketplace
+    - target_price
+    - delivered_source_cost
+    - matching_evidence
+  optional:
+    - commission_rate
+    - tax_rate
+    - return_reserve_rate
+    - stock_state
+    - brand_authorization
+    - operational_risk_flags
+  forbidden:
+    - skill_id
+    - skill_version
+    - provider
+    - adapter
+    - tool
+    - minimum_multiplier
+    - minimum_operating_margin_pct
+    - minimum_contribution_brl
+    - auto_publish
+    - auto_purchase
+    - pricing_mutation
+    - inventory_mutation
+    - fulfillment
+
+policy_inputs:
+  owner: commerce-domain-policy
+  economic_gate_policy: commerce-evaluation-gates-v1
+  current_gates:
+    minimum_multiplier: 5.0
+    minimum_operating_margin_pct: 60
+    minimum_contribution_brl: 30
+  caller_may_override: false
+
+outputs:
+  contract: CapabilityResult v1
+  data_contract: commerce-product-evaluation.v1
+  fields:
+    - decision
+    - reasons
+    - gates
+    - multiplier
+    - operating_margin_pct
+    - estimated_contribution_brl
+    - missing_inputs
+    - risk_flags
+    - provenance
+  decision_namespace: commerce_economic_decision
+  decision_enum: [APPROVED, REJECTED, MANUAL_REVIEW]
+  decision_is_governance_approval: false
+  semantics:
+    APPROVED: economic_gates_passed_but_no_side_effect_is_authorized
+    REJECTED: at_least_one_hard_economic_gate_failed
+    MANUAL_REVIEW: evidence_or_required_inputs_are_incomplete
+
+side_effect_authority:
+  publish: false
+  purchase: false
+  pricing_mutation: false
+  inventory_mutation: false
+  fulfillment: false
+
+permissions:
+  external_network: false
+  marketplace_read: []
+  marketplace_write: []
+  pii: none
+  filesystem_write: none
+  shell: false
+  secrets:
+    caller_access: forbidden
+    adapter_managed_refs: []
+
+approval:
+  required: false
+  status: NOT_REQUIRED
+  note: governance_approval_is_separate_from_the_commerce_economic_decision
+
+external_gates: []
+
+execution_mode: autonomous
+routing:
+  routing_eligible: false
+  execution_scope: eval_test_only
+  production_eligible: false
+  reason: prototype_not_integrated
+
+fallback_policy: none
+
+validation:
+  evidence:
+    - "Scale-Characters/amazon-ops main:scripts/comparar.py contains deterministic match/risk/economics pipeline and forbids LLM-calculated numeric gates"
+    - "Scale-Characters/amazon-ops#1 records a real snapshot rejected by economics rather than forcing a positive result"
+    - "Scale-Characters/amazon-ops#2 candidate.py implements 5x/60%/R$30 evaluation and offline tests cover pass/fail/manual-review behavior"
+    - "Scale-Characters/amazon-ops#2 config/parametros.yaml declares minimum_multiplier=5.0, minimum_operating_margin_pct=60, minimum_contribution=30"
+  limitations:
+    - V1 economic implementation is not yet merged to amazon-ops main
+    - positive and boundary cases are fixture/offline evidence
+    - no caller-agnostic runtime integration is active
+    - commission_tax_reserve_source_completeness_remains_domain_dependent
+
+promotion:
+  allowed: false
+  lifecycle_ceiling: PROTOTYPE
+  requires:
+    - merge_or_pin_canonical_evaluator_implementation
+    - contract_tests_for_exact_threshold_boundaries
+    - missing_input_and_error_normalization_tests
+    - evidence_that_policy_thresholds_cannot_be_overridden_by_caller
+    - at_least_one_reproducible_e2e_from_normalized_product_to_decision
+    - reviewer_approval
+
+owner_domain: commerce

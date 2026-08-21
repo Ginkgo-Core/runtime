@@ -1,0 +1,1332 @@
+{
+  "algorithm_version": "ginkgo.runtime-catalog.v1",
+  "authority": {
+    "capability_contract_version_pattern": "^v[0-9]+$",
+    "capability_name_pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$",
+    "descriptor_required_fields": [
+      "approval",
+      "caller_contract",
+      "capability",
+      "external_gates",
+      "fallback_policy",
+      "id",
+      "implementation_binding",
+      "kind",
+      "lifecycle_status",
+      "permissions",
+      "routing",
+      "schema_version",
+      "side_effect_class",
+      "version"
+    ],
+    "fallback_policy_enum": [
+      "none",
+      "same_semantics_only"
+    ],
+    "kind_enum": [
+      "deterministic_domain_skill",
+      "implementation_binding",
+      "provider_binding",
+      "internal_agent_workflow_candidate"
+    ],
+    "lifecycle_ceilings": {
+      "DEPRECATED": {
+        "production_eligible": false,
+        "routing_eligible": false
+      },
+      "FEATURE": {
+        "production_eligible": false,
+        "routing_eligible": false
+      },
+      "INTEGRATED": {
+        "production_eligible": false,
+        "routing_eligible": true
+      },
+      "PRODUCTION": {
+        "production_eligible": true,
+        "routing_eligible": true
+      },
+      "PROTOTYPE": {
+        "production_eligible": false,
+        "routing_eligible": false
+      },
+      "REJECTED": {
+        "production_eligible": false,
+        "routing_eligible": false
+      },
+      "VALIDATED": {
+        "production_eligible": false,
+        "routing_eligible": true
+      }
+    },
+    "lifecycle_status_enum": [
+      "FEATURE",
+      "PROTOTYPE",
+      "VALIDATED",
+      "INTEGRATED",
+      "PRODUCTION",
+      "DEPRECATED",
+      "REJECTED"
+    ],
+    "record_id_pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$",
+    "sources": {
+      "capability_contract_version_pattern": "contracts/core/capability-request.schema.json",
+      "capability_name_pattern": "contracts/core/capability-request.schema.json",
+      "descriptor_required_fields": "contracts/runtime/runtime-skill-descriptor.schema.json",
+      "fallback_policy_enum": "contracts/core/capability-request.schema.json",
+      "kind_enum": "contracts/runtime/runtime-skill-descriptor.schema.json",
+      "lifecycle_ceilings": "architecture/runtime/lifecycle-and-promotion.md#3",
+      "lifecycle_status_enum": "contracts/runtime/runtime-skill-descriptor.schema.json",
+      "record_id_pattern": "contracts/runtime/runtime-skill-descriptor.schema.json"
+    }
+  },
+  "capabilities": [
+    {
+      "declared_binding_skill_ids": [],
+      "lifecycle_ceiling": null,
+      "output_contract": "issue-reference",
+      "purpose": "Create actionable engineering work items from validated requirements.",
+      "record_class": "capability",
+      "record_id": "code.issue.create",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[4]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "declared_binding_skill_ids": [],
+      "lifecycle_ceiling": null,
+      "output_contract": "pull-request-reference",
+      "purpose": "Publish prepared implementation work for review.",
+      "record_class": "capability",
+      "record_id": "code.pr.open",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[5]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "declared_binding_skill_ids": [],
+      "lifecycle_ceiling": null,
+      "output_contract": "repo-analysis",
+      "purpose": "Inspect repository structure and implementation context.",
+      "record_class": "capability",
+      "record_id": "code.repo.inspect",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[3]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "declared_binding_skill_ids": [
+        "shopee-open-api.catalog.read"
+      ],
+      "lifecycle_ceiling": "FEATURE",
+      "output_contract": "marketplace-catalog-result",
+      "purpose": "Read product/catalog state for an explicitly selected marketplace or authorized shop.",
+      "record_class": "capability",
+      "record_id": "commerce.catalog.read",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[18]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "declared_binding_skill_ids": [
+        "amazon-spapi.catalog.search"
+      ],
+      "lifecycle_ceiling": "FEATURE",
+      "output_contract": "marketplace-catalog-search-result",
+      "purpose": "Search a marketplace catalog through a normalized read-only boundary.",
+      "record_class": "capability",
+      "record_id": "commerce.catalog.search",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[17]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "declared_binding_skill_ids": [
+        "amazon-spapi.inventory.read"
+      ],
+      "lifecycle_ceiling": "FEATURE",
+      "output_contract": "marketplace-inventory-result",
+      "purpose": "Read seller inventory state without mutation.",
+      "record_class": "capability",
+      "record_id": "commerce.inventory.read",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[20]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "declared_binding_skill_ids": [
+        "amazon-spapi.orders.read",
+        "shopee-open-api.orders.read"
+      ],
+      "lifecycle_ceiling": "FEATURE",
+      "output_contract": "marketplace-orders-result",
+      "purpose": "Read marketplace order state through a PII-minimized normalized contract.",
+      "record_class": "capability",
+      "record_id": "commerce.orders.read",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[21]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "declared_binding_skill_ids": [
+        "amazon-spapi.pricing.read"
+      ],
+      "lifecycle_ceiling": "FEATURE",
+      "output_contract": "marketplace-pricing-result",
+      "purpose": "Read current marketplace pricing and offer observations without mutation.",
+      "record_class": "capability",
+      "record_id": "commerce.pricing.read",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[19]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "declared_binding_skill_ids": [
+        "shopee.product.normalize"
+      ],
+      "lifecycle_ceiling": "FEATURE",
+      "output_contract": "commerce-product",
+      "purpose": "Normalize provider-specific product payloads into a stable commerce product shape.",
+      "record_class": "capability",
+      "record_id": "commerce.product.normalize",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[22]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "declared_binding_skill_ids": [],
+      "lifecycle_ceiling": null,
+      "output_contract": "audio-asset",
+      "purpose": "External audio generation when specialist provider capability is required.",
+      "record_class": "capability",
+      "record_id": "creative.audio.cloud",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[12]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "declared_binding_skill_ids": [],
+      "lifecycle_ceiling": null,
+      "output_contract": "creative-asset",
+      "purpose": "Cloud image generation when speed or provider-specific quality dominates.",
+      "record_class": "capability",
+      "record_id": "creative.image.cloud",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[10]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "declared_binding_skill_ids": [],
+      "lifecycle_ceiling": null,
+      "output_contract": "creative-asset",
+      "purpose": "Reproducible local image generation and controlled workflows.",
+      "record_class": "capability",
+      "record_id": "creative.image.local",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[9]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "declared_binding_skill_ids": [],
+      "lifecycle_ceiling": null,
+      "output_contract": "creative-asset",
+      "purpose": "Cloud video generation for ads, UGC, B-roll and social assets.",
+      "record_class": "capability",
+      "record_id": "creative.video.cloud",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[11]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    }
+  ],
+  "catalog_hash": "9a82a824183638c3731d66a5e1b6773eac73102f7734ae99c8d86645bdb4dfc2",
+  "catalog_version": "rkc1-9a82a824183638c3",
+  "pinned_sources": [
+    {
+      "blob_sha": "a161b1ed843decca2512288e730c3890b6797ecc",
+      "collection_key": null,
+      "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
+      "path": "contracts/core/capability-request.schema.json",
+      "record_class": null,
+      "ref": "master",
+      "repo": "Ginkgo-Core/ai-stack",
+      "role": "authority",
+      "sha256": "5afef04d4eff04f86c9a91f5b89e0256ffbb88713918557abc26890469331c10",
+      "size_bytes": 3386
+    },
+    {
+      "blob_sha": "5ffb05ed5745c8a7abf16d25394f56870fab2161",
+      "collection_key": null,
+      "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
+      "path": "contracts/runtime/runtime-skill-descriptor.schema.json",
+      "record_class": null,
+      "ref": "master",
+      "repo": "Ginkgo-Core/ai-stack",
+      "role": "authority",
+      "sha256": "025e1743eee226dad17301c26b45622b9e098a06b18ee7cab4b8899df0947969",
+      "size_bytes": 23870
+    },
+    {
+      "blob_sha": "beaa6e714d8a4040081d2da0c111b39aa1f428ec",
+      "collection_key": null,
+      "commit_sha": "89247220ffa15238cff209dba13088eae1a1a641",
+      "path": "features/commerce.amazon.catalog.search.yaml",
+      "record_class": "skill_descriptor",
+      "ref": "main",
+      "repo": "Ginkgo-Core/ginkgo-agents",
+      "role": "projected",
+      "sha256": "72420e5857a65038155255560b5aadd03a2813d106874868d12d04f9f129c15c",
+      "size_bytes": 3298
+    },
+    {
+      "blob_sha": "99aa1ffe77e052df988f53d2ed20593932b2a624",
+      "collection_key": null,
+      "commit_sha": "89247220ffa15238cff209dba13088eae1a1a641",
+      "path": "features/commerce.amazon.inventory.read.yaml",
+      "record_class": "skill_descriptor",
+      "ref": "main",
+      "repo": "Ginkgo-Core/ginkgo-agents",
+      "role": "projected",
+      "sha256": "18066718da6a024b9c007871a149c27c84fc9ca78368bc3fc5000204e9e54f8e",
+      "size_bytes": 3107
+    },
+    {
+      "blob_sha": "6089c9e51525a721dee10aab9ae04c45fe6ac310",
+      "collection_key": null,
+      "commit_sha": "89247220ffa15238cff209dba13088eae1a1a641",
+      "path": "features/commerce.amazon.orders.read.yaml",
+      "record_class": "skill_descriptor",
+      "ref": "main",
+      "repo": "Ginkgo-Core/ginkgo-agents",
+      "role": "projected",
+      "sha256": "9427d2e2f3922d966d4fc23502081ba4cccbf7f956b77c9905b641662c9f172f",
+      "size_bytes": 3251
+    },
+    {
+      "blob_sha": "f8424c54b8e3c9407441b596a29d45a0353edf94",
+      "collection_key": null,
+      "commit_sha": "89247220ffa15238cff209dba13088eae1a1a641",
+      "path": "features/commerce.amazon.pricing.read.yaml",
+      "record_class": "skill_descriptor",
+      "ref": "main",
+      "repo": "Ginkgo-Core/ginkgo-agents",
+      "role": "projected",
+      "sha256": "1c2a2a075389a580fce0cae75f40aac259e751c215fdeda7b688880ef16ee243",
+      "size_bytes": 3180
+    },
+    {
+      "blob_sha": "792674907563df37ff335a1854a5bd0bbdd1c054",
+      "collection_key": null,
+      "commit_sha": "89247220ffa15238cff209dba13088eae1a1a641",
+      "path": "features/commerce.product.evaluate.yaml",
+      "record_class": "skill_descriptor",
+      "ref": "main",
+      "repo": "Ginkgo-Core/ginkgo-agents",
+      "role": "projected",
+      "sha256": "90cbf74c4baad302f9bfeff4b8ad9f08444e5ed2599ca5adc7aaa267081439d2",
+      "size_bytes": 4974
+    },
+    {
+      "blob_sha": "f7af3ea945c36f2731857318859475d8593310f7",
+      "collection_key": null,
+      "commit_sha": "89247220ffa15238cff209dba13088eae1a1a641",
+      "path": "features/commerce.shopee.catalog.read.yaml",
+      "record_class": "skill_descriptor",
+      "ref": "main",
+      "repo": "Ginkgo-Core/ginkgo-agents",
+      "role": "projected",
+      "sha256": "e4fb422ce02aac786df61ae3e2b445e41bf9b60a4a433ab136663064b75e57d4",
+      "size_bytes": 4142
+    },
+    {
+      "blob_sha": "7c366e24c98eba9c32988a579d0be153ebb90bc3",
+      "collection_key": null,
+      "commit_sha": "89247220ffa15238cff209dba13088eae1a1a641",
+      "path": "features/commerce.shopee.orders.read.yaml",
+      "record_class": "skill_descriptor",
+      "ref": "main",
+      "repo": "Ginkgo-Core/ginkgo-agents",
+      "role": "projected",
+      "sha256": "30df982824fc61acb235d8c4a55089a3e7df762446dcebbb2c71ac7daf75aa30",
+      "size_bytes": 4346
+    },
+    {
+      "blob_sha": "0933eed22a764a0dbb8f99b49711f1f6883dfbfd",
+      "collection_key": null,
+      "commit_sha": "89247220ffa15238cff209dba13088eae1a1a641",
+      "path": "features/commerce.shopee.product.normalize.yaml",
+      "record_class": "skill_descriptor",
+      "ref": "main",
+      "repo": "Ginkgo-Core/ginkgo-agents",
+      "role": "projected",
+      "sha256": "661fbe73a81ba5b09fda3b14260789175f12ea57e5f02593ed2716e551ef7c99",
+      "size_bytes": 5765
+    },
+    {
+      "blob_sha": "eccca603ceabfb1dc523c6c68c667a67be102b79",
+      "collection_key": null,
+      "commit_sha": "89247220ffa15238cff209dba13088eae1a1a641",
+      "path": "features/media.image.generate.cloud.yaml",
+      "record_class": "skill_descriptor",
+      "ref": "main",
+      "repo": "Ginkgo-Core/ginkgo-agents",
+      "role": "projected",
+      "sha256": "5d454c09621e4ab363ce8294a803125232a2c78b64f6d8565128a11a1cdf184c",
+      "size_bytes": 1128
+    },
+    {
+      "blob_sha": "7abda8815c01d6b9159e4369e9185d5aba3d41cd",
+      "collection_key": null,
+      "commit_sha": "89247220ffa15238cff209dba13088eae1a1a641",
+      "path": "skills/media/image/generate.local/skill.yaml",
+      "record_class": "skill_descriptor",
+      "ref": "main",
+      "repo": "Ginkgo-Core/ginkgo-agents",
+      "role": "projected",
+      "sha256": "32b13a2501b60f48bfe7f769006a5ea312d2081054dca37a27efc1868f4f379b",
+      "size_bytes": 2637
+    },
+    {
+      "blob_sha": "9bfc4426a14ad0650104e308c5cdeafd7e27d596",
+      "collection_key": null,
+      "commit_sha": "89247220ffa15238cff209dba13088eae1a1a641",
+      "path": "skills/media/image/generate/skill.yaml",
+      "record_class": "skill_descriptor",
+      "ref": "main",
+      "repo": "Ginkgo-Core/ginkgo-agents",
+      "role": "projected",
+      "sha256": "c4fe76a7fb8568e3153dd17137ddc82885b7f66546e3d60d0174e1d8c27c144b",
+      "size_bytes": 2208
+    },
+    {
+      "blob_sha": "2bf1a4da48c4607c74a10ebe50ccc54988a1b5dd",
+      "collection_key": "capabilities",
+      "commit_sha": "a9943567458f94a4737c2b08bd441e9aff01071f",
+      "path": "registry/capabilities.yaml",
+      "record_class": "capability",
+      "ref": "main",
+      "repo": "Ginkgo-Core/ginkgo-library",
+      "role": "projected",
+      "sha256": "82b6e04088141e7ae6e8e5141e8a54dd296f5567382e94e791e6275474f97402",
+      "size_bytes": 7632
+    },
+    {
+      "blob_sha": "77cb1a4c731a4b68adb2072dce65a6f6541613d7",
+      "collection_key": "skills",
+      "commit_sha": "a9943567458f94a4737c2b08bd441e9aff01071f",
+      "path": "registry/skills.yaml",
+      "record_class": "skill_descriptor",
+      "ref": "main",
+      "repo": "Ginkgo-Core/ginkgo-library",
+      "role": "projected",
+      "sha256": "1b3d9d65b4b972d6e085cb25e6dc1a63706292c3d5f48a087bac28b1cafdaf72",
+      "size_bytes": 20717
+    }
+  ],
+  "rejections": [
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability id 'knowledge.research' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        }
+      ],
+      "record_class": "capability",
+      "record_id": "knowledge.research",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[0]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability id 'knowledge.notebook' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        }
+      ],
+      "record_class": "capability",
+      "record_id": "knowledge.notebook",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[1]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability id 'reasoning.long-context' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        }
+      ],
+      "record_class": "capability",
+      "record_id": "reasoning.long-context",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[2]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability id 'database.query' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        }
+      ],
+      "record_class": "capability",
+      "record_id": "database.query",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[6]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability id 'database.write' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        }
+      ],
+      "record_class": "capability",
+      "record_id": "database.write",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[7]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability id 'database.vector-search' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        }
+      ],
+      "record_class": "capability",
+      "record_id": "database.vector-search",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[8]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability id 'creative.music' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        }
+      ],
+      "record_class": "capability",
+      "record_id": "creative.music",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[13]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability id 'dev.prototype-ai' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        }
+      ],
+      "record_class": "capability",
+      "record_id": "dev.prototype-ai",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[14]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability id 'dev.async-coding' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        }
+      ],
+      "record_class": "capability",
+      "record_id": "dev.async-coding",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[15]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability id 'storage.files' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        }
+      ],
+      "record_class": "capability",
+      "record_id": "storage.files",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[16]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "TAXONOMY_IDENTIFIER_COLLISION",
+          "detail": "identifier 'commerce.product.evaluate' is used for ['capability', 'skill_id'] at once; CAPABILITY != SKILL != BINDING != TOOL != ADAPTER != PROVIDER"
+        }
+      ],
+      "record_class": "capability",
+      "record_id": "commerce.product.evaluate",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml#capabilities[23]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "TAXONOMY_IDENTIFIER_COLLISION",
+          "detail": "identifier 'commerce.product.evaluate' is used for ['capability', 'skill_id'] at once; CAPABILITY != SKILL != BINDING != TOOL != ADAPTER != PROVIDER"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "commerce.product.evaluate",
+      "record_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.product.evaluate.yaml#$",
+      "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.product.evaluate.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "MISSING_CAPABILITY",
+          "detail": "no `capability`; only kind internal_agent_workflow_candidate may carry a null capability"
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "media.image.generate.cloud",
+      "record_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/media.image.generate.cloud.yaml#$",
+      "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/media.image.generate.cloud.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "FALLBACK_POLICY_NOT_IN_FROZEN_ENUM",
+          "detail": "fallback policy 'explicit' is not in the frozen enum ['none', 'same_semantics_only']"
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "media.image.generate.local",
+      "record_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:skills/media/image/generate.local/skill.yaml#$",
+      "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:skills/media/image/generate.local/skill.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability name 'resolved-by-router' has 1 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "media.image.generate",
+      "record_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:skills/media/image/generate/skill.yaml#$",
+      "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:skills/media/image/generate/skill.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability name 'knowledge.research' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        },
+        {
+          "code": "FALLBACK_NAMED_CANDIDATE_CHAIN",
+          "detail": "fallbacks names 1 candidate(s) (research.web-general); a policy authorises a mode and never names a candidate (invariant 7)"
+        },
+        {
+          "code": "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED",
+          "detail": "declares legacy human_approval: False. The field is not accepted, and its value has no boolean image, so coercing it would fabricate a governance declaration."
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "research.market-deep-scan",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[0]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability name 'knowledge.research' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        },
+        {
+          "code": "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED",
+          "detail": "declares legacy human_approval: False. The field is not accepted, and its value has no boolean image, so coercing it would fabricate a governance declaration."
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "research.web-general",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[1]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability name 'knowledge.notebook' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        },
+        {
+          "code": "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED",
+          "detail": "declares legacy human_approval: True. The field is not accepted, and its value has no boolean image, so coercing it would fabricate a governance declaration."
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "knowledge.ingest-source-set",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[2]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability name 'knowledge.notebook' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        },
+        {
+          "code": "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED",
+          "detail": "declares legacy human_approval: True. The field is not accepted, and its value has no boolean image, so coercing it would fabricate a governance declaration."
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "knowledge.promote-pattern",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[3]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED",
+          "detail": "declares legacy human_approval: False. The field is not accepted, and its value has no boolean image, so coercing it would fabricate a governance declaration."
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "code.repo.inspect",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[4]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED",
+          "detail": "declares legacy human_approval: False. The field is not accepted, and its value has no boolean image, so coercing it would fabricate a governance declaration."
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "code.issue.create",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[5]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED",
+          "detail": "declares legacy human_approval: False. The field is not accepted, and its value has no boolean image, so coercing it would fabricate a governance declaration."
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "code.pr.open",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[6]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability name 'dev.async-coding' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        },
+        {
+          "code": "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED",
+          "detail": "declares legacy human_approval: 'supervised'. The field is not accepted, and its value has no boolean image, so coercing it would fabricate a governance declaration."
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "code.implement.scoped",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[7]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability name 'storage.files' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        },
+        {
+          "code": "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED",
+          "detail": "declares legacy human_approval: False. The field is not accepted, and its value has no boolean image, so coercing it would fabricate a governance declaration."
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "storage.file.archive",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[8]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability name 'database.query' has 2 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        },
+        {
+          "code": "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED",
+          "detail": "declares legacy human_approval: False. The field is not accepted, and its value has no boolean image, so coercing it would fabricate a governance declaration."
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "database.query.read",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[9]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED",
+          "detail": "declares legacy human_approval: False. The field is not accepted, and its value has no boolean image, so coercing it would fabricate a governance declaration."
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "media.image.generate.local",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[10]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "CAPABILITY_NAME_NON_CONFORMANT",
+          "detail": "capability name 'resolved-by-router' has 1 dot-separated segment(s) and fails the frozen pattern ^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        },
+        {
+          "code": "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED",
+          "detail": "declares legacy human_approval: False. The field is not accepted, and its value has no boolean image, so coercing it would fabricate a governance declaration."
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "media.image.generate",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[11]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED",
+          "detail": "declares legacy human_approval: False. The field is not accepted, and its value has no boolean image, so coercing it would fabricate a governance declaration."
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "media.image.generate.cloud",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[12]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        },
+        {
+          "code": "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED",
+          "detail": "declares legacy human_approval: False. The field is not accepted, and its value has no boolean image, so coercing it would fabricate a governance declaration."
+        },
+        {
+          "code": "MISSING_KIND",
+          "detail": "no `kind` discriminator; CAPABILITY != SKILL != BINDING is held by the closed kind enum, so the record has no taxonomy"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "media.product-ad.fast",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[13]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "amazon-spapi.catalog.search",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[14]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "amazon-spapi.pricing.read",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[15]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "amazon-spapi.inventory.read",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[16]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "amazon-spapi.orders.read",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[17]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "shopee-open-api.catalog.read",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[18]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "shopee-open-api.orders.read",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[19]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "shopee.product.normalize",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[20]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    },
+    {
+      "reasons": [
+        {
+          "code": "CAPABILITY_CONTRACT_VERSION_MISSING",
+          "detail": "the record names a capability but declares no contract_version; CapabilityRequest v1 requires one and the catalog invents none"
+        }
+      ],
+      "record_class": "skill_descriptor",
+      "record_id": "commerce.product.evaluate",
+      "record_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml#skills[21]",
+      "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/skills.yaml"
+    }
+  ],
+  "skills": [
+    {
+      "advisory_metadata": {
+        "autonomy_level": "A1",
+        "level": "L1",
+        "maturity": "F1",
+        "status": "feature"
+      },
+      "capability": {
+        "contract_version": "v1",
+        "name": "commerce.catalog.search"
+      },
+      "descriptor_gaps": [
+        "schema_version",
+        "side_effect_class"
+      ],
+      "fallback_policy": "none",
+      "implementation_binding": {
+        "adapter_id": "amazon-spapi",
+        "binding_id": null,
+        "caller_visible": false,
+        "provider": "amazon-selling-partner",
+        "skill_id": "amazon-spapi.catalog.search",
+        "skill_version": "0.1.0",
+        "tool_id": null
+      },
+      "kind": "provider_binding",
+      "lifecycle_status": "FEATURE",
+      "lifecycle_status_declared": true,
+      "record_class": "skill_descriptor",
+      "record_id": "amazon-spapi.catalog.search",
+      "record_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.amazon.catalog.search.yaml#$",
+      "routing": {
+        "declared": {
+          "discoverable": false,
+          "production_eligible": false,
+          "routing_eligible": true
+        },
+        "discoverable": true,
+        "production_eligible": false,
+        "routing_eligible": false
+      },
+      "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.amazon.catalog.search.yaml"
+    },
+    {
+      "advisory_metadata": {
+        "autonomy_level": "A1",
+        "level": "L1",
+        "maturity": "F1",
+        "status": "feature"
+      },
+      "capability": {
+        "contract_version": "v1",
+        "name": "commerce.inventory.read"
+      },
+      "descriptor_gaps": [
+        "schema_version",
+        "side_effect_class"
+      ],
+      "fallback_policy": "none",
+      "implementation_binding": {
+        "adapter_id": "amazon-spapi",
+        "binding_id": null,
+        "caller_visible": false,
+        "provider": "amazon-selling-partner",
+        "skill_id": "amazon-spapi.inventory.read",
+        "skill_version": "0.1.0",
+        "tool_id": null
+      },
+      "kind": "provider_binding",
+      "lifecycle_status": "FEATURE",
+      "lifecycle_status_declared": true,
+      "record_class": "skill_descriptor",
+      "record_id": "amazon-spapi.inventory.read",
+      "record_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.amazon.inventory.read.yaml#$",
+      "routing": {
+        "declared": {
+          "discoverable": false,
+          "production_eligible": false,
+          "routing_eligible": true
+        },
+        "discoverable": true,
+        "production_eligible": false,
+        "routing_eligible": false
+      },
+      "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.amazon.inventory.read.yaml"
+    },
+    {
+      "advisory_metadata": {
+        "autonomy_level": "A1",
+        "level": "L1",
+        "maturity": "F1",
+        "status": "feature"
+      },
+      "capability": {
+        "contract_version": "v1",
+        "name": "commerce.orders.read"
+      },
+      "descriptor_gaps": [
+        "schema_version",
+        "side_effect_class"
+      ],
+      "fallback_policy": "none",
+      "implementation_binding": {
+        "adapter_id": "amazon-spapi",
+        "binding_id": null,
+        "caller_visible": false,
+        "provider": "amazon-selling-partner",
+        "skill_id": "amazon-spapi.orders.read",
+        "skill_version": "0.1.0",
+        "tool_id": null
+      },
+      "kind": "provider_binding",
+      "lifecycle_status": "FEATURE",
+      "lifecycle_status_declared": true,
+      "record_class": "skill_descriptor",
+      "record_id": "amazon-spapi.orders.read",
+      "record_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.amazon.orders.read.yaml#$",
+      "routing": {
+        "declared": {
+          "discoverable": false,
+          "production_eligible": false,
+          "routing_eligible": true
+        },
+        "discoverable": true,
+        "production_eligible": false,
+        "routing_eligible": false
+      },
+      "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.amazon.orders.read.yaml"
+    },
+    {
+      "advisory_metadata": {
+        "autonomy_level": "A1",
+        "level": "L1",
+        "maturity": "F1",
+        "status": "feature"
+      },
+      "capability": {
+        "contract_version": "v1",
+        "name": "commerce.pricing.read"
+      },
+      "descriptor_gaps": [
+        "schema_version",
+        "side_effect_class"
+      ],
+      "fallback_policy": "none",
+      "implementation_binding": {
+        "adapter_id": "amazon-spapi",
+        "binding_id": null,
+        "caller_visible": false,
+        "provider": "amazon-selling-partner",
+        "skill_id": "amazon-spapi.pricing.read",
+        "skill_version": "0.1.0",
+        "tool_id": null
+      },
+      "kind": "provider_binding",
+      "lifecycle_status": "FEATURE",
+      "lifecycle_status_declared": true,
+      "record_class": "skill_descriptor",
+      "record_id": "amazon-spapi.pricing.read",
+      "record_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.amazon.pricing.read.yaml#$",
+      "routing": {
+        "declared": {
+          "discoverable": false,
+          "production_eligible": false,
+          "routing_eligible": true
+        },
+        "discoverable": true,
+        "production_eligible": false,
+        "routing_eligible": false
+      },
+      "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.amazon.pricing.read.yaml"
+    },
+    {
+      "advisory_metadata": {
+        "autonomy_level": "A1",
+        "level": "L1",
+        "maturity": "F1",
+        "phase": "PRE_APPROVAL",
+        "status": "feature"
+      },
+      "capability": {
+        "contract_version": "v1",
+        "name": "commerce.catalog.read"
+      },
+      "descriptor_gaps": [
+        "schema_version",
+        "side_effect_class"
+      ],
+      "fallback_policy": "none",
+      "implementation_binding": {
+        "adapter_id": "shopee-open-api",
+        "binding_id": null,
+        "caller_visible": false,
+        "provider": "shopee-open-platform",
+        "skill_id": "shopee-open-api.catalog.read",
+        "skill_version": "0.1.0",
+        "tool_id": null
+      },
+      "kind": "provider_binding",
+      "lifecycle_status": "FEATURE",
+      "lifecycle_status_declared": true,
+      "record_class": "skill_descriptor",
+      "record_id": "shopee-open-api.catalog.read",
+      "record_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.shopee.catalog.read.yaml#$",
+      "routing": {
+        "declared": {
+          "discoverable": false,
+          "production_eligible": false,
+          "routing_eligible": true
+        },
+        "discoverable": true,
+        "production_eligible": false,
+        "routing_eligible": false
+      },
+      "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.shopee.catalog.read.yaml"
+    },
+    {
+      "advisory_metadata": {
+        "autonomy_level": "A1",
+        "level": "L1",
+        "maturity": "F1",
+        "phase": "PRE_APPROVAL",
+        "status": "feature"
+      },
+      "capability": {
+        "contract_version": "v1",
+        "name": "commerce.orders.read"
+      },
+      "descriptor_gaps": [
+        "schema_version",
+        "side_effect_class"
+      ],
+      "fallback_policy": "none",
+      "implementation_binding": {
+        "adapter_id": "shopee-open-api",
+        "binding_id": null,
+        "caller_visible": false,
+        "provider": "shopee-open-platform",
+        "skill_id": "shopee-open-api.orders.read",
+        "skill_version": "0.1.0",
+        "tool_id": null
+      },
+      "kind": "provider_binding",
+      "lifecycle_status": "FEATURE",
+      "lifecycle_status_declared": true,
+      "record_class": "skill_descriptor",
+      "record_id": "shopee-open-api.orders.read",
+      "record_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.shopee.orders.read.yaml#$",
+      "routing": {
+        "declared": {
+          "discoverable": false,
+          "production_eligible": false,
+          "routing_eligible": true
+        },
+        "discoverable": true,
+        "production_eligible": false,
+        "routing_eligible": false
+      },
+      "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.shopee.orders.read.yaml"
+    },
+    {
+      "advisory_metadata": {
+        "autonomy_level": "A1",
+        "level": "L1",
+        "maturity": "F1",
+        "phase": "PRE_APPROVAL",
+        "status": "feature"
+      },
+      "capability": {
+        "contract_version": "v1",
+        "name": "commerce.product.normalize"
+      },
+      "descriptor_gaps": [
+        "schema_version",
+        "side_effect_class"
+      ],
+      "fallback_policy": "none",
+      "implementation_binding": {
+        "adapter_id": null,
+        "binding_id": null,
+        "caller_visible": false,
+        "provider": null,
+        "skill_id": "shopee.product.normalize",
+        "skill_version": "0.1.0",
+        "tool_id": "amazon-ops-shopee-normalizer"
+      },
+      "kind": "implementation_binding",
+      "lifecycle_status": "FEATURE",
+      "lifecycle_status_declared": true,
+      "record_class": "skill_descriptor",
+      "record_id": "shopee.product.normalize",
+      "record_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.shopee.product.normalize.yaml#$",
+      "routing": {
+        "declared": {
+          "discoverable": false,
+          "production_eligible": true,
+          "routing_eligible": true
+        },
+        "discoverable": true,
+        "production_eligible": false,
+        "routing_eligible": false
+      },
+      "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.shopee.product.normalize.yaml"
+    }
+  ]
+}

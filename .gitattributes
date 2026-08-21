@@ -1,0 +1,16 @@
+# Line endings are part of the catalog's identity.
+#
+# RK-07 hashes file CONTENT: the manifest carries a SHA-256 per pinned source and
+# the loader enforces it on every build. An end-of-line translation on checkout
+# would change every digest, and a Windows clone would fail its own integrity gate
+# with no code having changed. So conversion is switched off, not merely defaulted.
+
+* text=auto eol=lf
+
+# The pinned snapshot is byte-exact GitHub truth. Git must never touch it.
+catalog/sources/**            -text
+
+# Generated artifacts are compared byte for byte by `catalog emit --check`.
+catalog/sources.manifest.json -text
+catalog/catalog.snapshot.json -text
+catalog/rejection-report.json -text

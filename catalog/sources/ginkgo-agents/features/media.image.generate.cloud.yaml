@@ -1,0 +1,27 @@
+# Feature Record — media.image.generate.cloud (SKILL_ATLAS §10)
+id: media.image.generate.cloud
+status: prototype
+maturity: F2              # PROTOTYPE — NÃO pode ser VALIDATED ainda
+purpose: >
+  Gerar imagem em cloud quando velocidade ou qualidade específica de provider dominarem.
+
+candidate_executors:
+  - pyre GoogleImageProvider (gemini-image, modelo pinado gemini-2.5-flash-image)  # implementado
+  - fal-api                                                                        # preferência futura; sem credencial local
+
+what_works:                 # evidência da Wave 9 — real, porém insuficiente para VALIDATED
+  - adapter na mesma abstração CreativeProvider
+  - health real (models endpoint OK)
+  - erro normalizado + persistência de jobs cloud
+  - cost gate (MAX_CLOUD_TEST_COST_USD) testado
+
+blocker:
+  - provider quota/billing: HTTP 429 em 2 tentativas (2026-08-17/18); custo incorrido US$0
+
+next_validation:
+  - one successful paid cloud E2E (gate US$0.25)
+
+provider_status: EXPERIMENTAL   # nunca elegível em produção; nunca fallback automático
+promotion:
+  allowed: false
+owner_domain: media

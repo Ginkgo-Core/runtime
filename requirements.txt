@@ -1,0 +1,7 @@
+# The kernel's only runtime dependency. See docs/adr/ADR-RT-001-implementation-stack.md.
+#
+# It exists for one reason: the three registries RK-07 projects are YAML. It is the
+# same dependency ai-stack/tools/conformance already takes, for the same reason.
+# Pinned exactly, so a catalog built in CI is parsed by the same code as a catalog
+# built locally.
+PyYAML==6.0.2

@@ -1,0 +1,189 @@
+version: 4
+updated_at: 2026-08-19
+
+# Capability = provider-agnostic public semantic contract.
+# Skill/binding = internal implementation possibility declared for Domain Router discovery.
+# Tool/provider = replaceable implementation metadata; never caller routing authority.
+
+capabilities:
+  - id: knowledge.research
+    purpose: Deep web research and evidence gathering.
+    preferred_skills: [research.market-deep-scan]
+    output_contract: research-pack
+
+  - id: knowledge.notebook
+    purpose: Source-grounded learning, synthesis and question answering over curated source sets.
+    preferred_skills: [knowledge.ingest-source-set, knowledge.promote-pattern]
+    output_contract: notebook-synthesis
+
+  - id: reasoning.long-context
+    purpose: Large-context analysis of repositories, documents, logs and mixed source packs.
+    preferred_tools: [google-gemini-api]
+    output_contract: analysis-artifact
+
+  - id: code.repo.inspect
+    purpose: Inspect repository structure and implementation context.
+    preferred_skills: [code.repo.inspect]
+    output_contract: repo-analysis
+
+  - id: code.issue.create
+    purpose: Create actionable engineering work items from validated requirements.
+    preferred_skills: [code.issue.create]
+    output_contract: issue-reference
+
+  - id: code.pr.open
+    purpose: Publish prepared implementation work for review.
+    preferred_skills: [code.pr.open]
+    output_contract: pull-request-reference
+
+  - id: database.query
+    purpose: Read operational application state through a governed database boundary.
+    preferred_skills: [database.query.read]
+    output_contract: normalized-data-result
+
+  - id: database.write
+    purpose: Mutate operational application state through an explicit governed contract.
+    output_contract: mutation-result
+
+  - id: database.vector-search
+    purpose: Retrieve semantic context from supported operational knowledge stores.
+    output_contract: ranked-context
+
+  - id: creative.image.local
+    purpose: Reproducible local image generation and controlled workflows.
+    preferred_skills: [media.image.generate.local]
+    output_contract: creative-asset
+
+  - id: creative.image.cloud
+    purpose: Cloud image generation when speed or provider-specific quality dominates.
+    preferred_skills: [media.image.generate.cloud]
+    output_contract: creative-asset
+
+  - id: creative.video.cloud
+    purpose: Cloud video generation for ads, UGC, B-roll and social assets.
+    preferred_skills: [media.product-ad.fast]
+    output_contract: creative-asset
+
+  - id: creative.audio.cloud
+    purpose: External audio generation when specialist provider capability is required.
+    output_contract: audio-asset
+
+  - id: creative.music
+    purpose: Background music, sonic identity and campaign audio.
+    output_contract: audio-asset
+
+  - id: dev.prototype-ai
+    purpose: Prompt, model, structured-output and tool-calling prototyping.
+    preferred_tools: [google-gemini-api]
+    output_contract: validated-prototype
+
+  - id: dev.async-coding
+    purpose: Delegated repository work with isolated task ownership and reviewable evidence.
+    preferred_skills: [code.implement.scoped]
+    output_contract: reviewed-diff
+
+  - id: storage.files
+    purpose: Large-file and document storage outside Git repositories.
+    preferred_skills: [storage.file.archive]
+    output_contract: durable-file-reference
+    rules:
+      - GitHub remains canonical for source code and versioned engineering docs.
+      - Operational application state belongs in databases such as Supabase/Postgres.
+      - Secrets require a dedicated governed secret boundary, not arbitrary Drive folders.
+
+  - id: commerce.catalog.search
+    purpose: Search a marketplace catalog through a normalized read-only boundary.
+    routing_key: marketplace_ref
+    bindings:
+      - skill_id: amazon-spapi.catalog.search
+        when:
+          marketplace: amazon
+        routing_eligible: false
+    output_contract: marketplace-catalog-search-result
+    lifecycle_ceiling: FEATURE
+
+  - id: commerce.catalog.read
+    purpose: Read product/catalog state for an explicitly selected marketplace or authorized shop.
+    routing_key: marketplace_ref
+    bindings:
+      - skill_id: shopee-open-api.catalog.read
+        when:
+          marketplace: shopee
+        routing_eligible: false
+    output_contract: marketplace-catalog-result
+    lifecycle_ceiling: FEATURE
+
+  - id: commerce.pricing.read
+    purpose: Read current marketplace pricing and offer observations without mutation.
+    routing_key: marketplace_ref
+    bindings:
+      - skill_id: amazon-spapi.pricing.read
+        when:
+          marketplace: amazon
+        routing_eligible: false
+    output_contract: marketplace-pricing-result
+    lifecycle_ceiling: FEATURE
+
+  - id: commerce.inventory.read
+    purpose: Read seller inventory state without mutation.
+    routing_key: marketplace_ref
+    bindings:
+      - skill_id: amazon-spapi.inventory.read
+        when:
+          marketplace: amazon
+        routing_eligible: false
+    output_contract: marketplace-inventory-result
+    lifecycle_ceiling: FEATURE
+
+  - id: commerce.orders.read
+    purpose: Read marketplace order state through a PII-minimized normalized contract.
+    routing_key: marketplace_ref
+    bindings:
+      - skill_id: amazon-spapi.orders.read
+        when:
+          marketplace: amazon
+        routing_eligible: false
+      - skill_id: shopee-open-api.orders.read
+        when:
+          marketplace: shopee
+        routing_eligible: false
+    output_contract: marketplace-orders-result
+    lifecycle_ceiling: FEATURE
+    rules:
+      - Never fallback across marketplaces.
+
+  - id: commerce.product.normalize
+    purpose: Normalize provider-specific product payloads into a stable commerce product shape.
+    routing_key: source_marketplace
+    bindings:
+      - skill_id: shopee.product.normalize
+        when:
+          marketplace: shopee
+        routing_eligible: false
+    output_contract: commerce-product
+    lifecycle_ceiling: FEATURE
+
+  - id: commerce.product.evaluate
+    purpose: Apply deterministic matching, compliance and economic gates to a normalized candidate.
+    bindings:
+      - skill_id: commerce.product.evaluate
+        provider_neutral: true
+        routing_eligible: false
+    output_contract: commerce-product-evaluation
+    lifecycle_ceiling: PROTOTYPE
+    rules:
+      - An APPROVED economic evaluation is advisory and is not the P0 Approval contract.
+      - An APPROVED economic evaluation never authorizes publication, purchase or other side effects.
+      - Economic thresholds are policy-owned and cannot be overridden by callers.
+
+routing_principles:
+  - "Canonical runtime path: Caller -> CapabilityRequest -> Capability Bus -> Domain Router -> skill/version -> adapter -> provider -> CapabilityResult."
+  - "Library declares what exists, what is discoverable and applicable constraints; it does not perform runtime routing."
+  - "The Domain Router owns runtime capability-to-binding resolution and eligibility checks."
+  - "TaskOps -> Executor Router -> Human | n8n | Hermes | OpenClaw | Sylvia is a separate operational path."
+  - "DISCOVERABLE != ROUTING_ELIGIBLE != PRODUCTION_ELIGIBLE."
+  - "Providers are replaceable implementations behind adapters and stable Ginkgo contracts."
+  - "GitHub is source of truth for registry/architecture; PostgreSQL is source of truth for runtime state."
+  - "Do not infer API entitlement from a consumer subscription."
+  - "A web-only product must remain marked human-assisted until a real autonomous integration exists."
+  - "Marketplace selection is a routing constraint; never silently cross marketplaces."

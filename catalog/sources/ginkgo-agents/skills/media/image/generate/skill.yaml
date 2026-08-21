@@ -1,0 +1,74 @@
+# Skill GENÉRICA — contrato por propósito, provider decidido pelo Router (Wave 10)
+id: media.image.generate
+version: 1.0.0
+level: L1
+maturity: S1          # SKILL — E2E genérico validado (Wave 10); integração ampla pendente
+autonomy_level: A2
+skill_level: L1
+
+purpose: >
+  Gerar uma imagem utilizando o melhor provider VALIDADO compatível com as
+  constraints do request. O caller nunca escolhe provider/tool/modelo.
+
+# capability é RESOLVIDA pelo Pyre Router por policy — o caller não envia capability.
+capability: resolved-by-router   # creative.image.local | creative.image.cloud (elegíveis VALIDATED)
+
+use_when:
+  - caller_should_not_know_providers
+  - constraints_driven_selection
+
+avoid_when:
+  - explicit_local_reproducibility_contract_required   # use media.image.generate.local
+
+inputs:
+  required:
+    - request_id
+    - prompt
+  optional:
+    - negative_prompt
+    - generation: { width, height, seed, preset }
+    - constraints:
+        privacy: local_only | cloud_allowed
+        latency: relaxed | normal | fast
+        quality: standard | high
+        max_cost_usd: number
+        residency: local | any
+    - metadata: { caller, campaign_id, product_id, tags }
+
+forbidden_inputs: [provider, tool, model, workflow, command, args, path, script]
+
+outputs:
+  contract: creative-asset
+
+executor:
+  type: n8n
+  workflow: creative-image-generate-v1
+  router: pyre                     # Routing V3: skill → constraints → eligible → policy → provider
+
+provider_eligibility:
+  rule: only VALIDATED providers are selectable in production
+  current:
+    comfyui-local: VALIDATED
+    google-gemini-image: EXPERIMENTAL   # nunca selecionado fora de eval mode explícito
+  no_silent_fallback: true
+
+permissions:
+  network: internal
+  filesystem_write: assets_only
+  shell: false
+  external_side_effects: only_if_cloud_selected_by_policy
+
+execution_mode: autonomous
+
+cost_policy:
+  local: billing US$0
+  cloud: gated por max_cost_usd + MAX_CLOUD_TEST_COST_USD; somente providers VALIDATED
+
+validation:
+  e2e: true
+  evidence:
+    - wave10: generic E2E roteado por policy para comfyui-local (seed 2026082001)
+    - wave10: routing tests A-E (36/36 na suíte)
+
+owner: pyre
+status: skill
