@@ -134,3 +134,102 @@ def report(catalog):
     from ginkgo_runtime.catalog.build import rejection_report
 
     return rejection_report(catalog)
+
+
+# ---------------------------------------------------------------------------
+# RK-01 Capability Bus fixtures
+# ---------------------------------------------------------------------------
+
+
+def capability_request(**overrides):
+    """A minimal request that validates against the frozen ``CapabilityRequest v1``.
+
+    Every negative test starts from a document that is known-good, so a failure
+    is attributable to the one field the test changed and to nothing else.
+    """
+    request = {
+        "request_id": "req-0001",
+        "correlation_id": "corr-0001",
+        "caller": {
+            "actor_id": "actor-1",
+            "actor_type": "API",
+            "tenant_id": "tenant-1",
+            "workspace_id": "workspace-1",
+        },
+        "capability": {"name": "system.echo.execute", "contract_version": "v1"},
+        "input": {"message": "hello"},
+        "constraints": {"fallback_policy": "none"},
+        "governance": {"approval_context": {}, "external_gate_context": {}},
+        "evidence": {"required": True},
+        "idempotency_key": "idem-0001",
+    }
+    request.update(overrides)
+    return request
+
+
+def execution_result(**overrides):
+    """A minimal document that validates against ``RuntimeExecutionResult v1``."""
+    result = {
+        "schema_version": "ginkgo.runtime-execution-result.v1",
+        "execution_id": "exec-0001",
+        "request_id": "req-0001",
+        "correlation_id": "corr-0001",
+        "idempotency_key": "idem-0001",
+        "decision_ref": {"decision_id": "dec-0001", "decision_hash": "a" * 64},
+        "state": "succeeded",
+        "terminal": True,
+        "telemetry": {
+            "started_at": "2026-08-21T12:00:00Z",
+            "ended_at": "2026-08-21T12:00:01Z",
+            "duration_ms": 1000,
+            "attempts": 1,
+        },
+        "output": {"message": "hello"},
+    }
+    result.update(overrides)
+    return result
+
+
+def routed_outcome(execution=None, **decision_overrides):
+    """A ``ROUTED`` decision plus its execution, both conformant."""
+    from ginkgo_runtime.bus import DownstreamOutcome, RouteView
+
+    decision = {
+        "outcome": "ROUTED",
+        "domain": "system",
+        "skill_id": "rk-reference-echo",
+        "skill_version": "1.0.0",
+        "adapter_id": None,
+        "provider": None,
+        "routing_reason": "scripted deterministic route",
+        "evidence_refs": ("ev-0001",),
+    }
+    decision.update(decision_overrides)
+    return DownstreamOutcome(
+        decision=RouteView(**decision),
+        execution=execution_result() if execution is None else execution,
+    )
+
+
+@pytest.fixture(scope="session")
+def contracts():
+    """The frozen contracts, loaded from the repository's pinned snapshot."""
+    from ginkgo_runtime.catalog.manifest import load_manifest
+    from ginkgo_runtime.contracts import load_frozen_contracts
+
+    return load_frozen_contracts(load_manifest(REPO_ROOT).read)
+
+
+@pytest.fixture
+def downstream():
+    """A deterministic stand-in scripted for ``system.echo.execute``."""
+    from ginkgo_runtime.bus import DeterministicDownstream
+
+    return DeterministicDownstream(by_capability={"system.echo.execute": routed_outcome()})
+
+
+@pytest.fixture
+def bus(downstream, contracts):
+    from ginkgo_runtime.bus import CapabilityBus
+
+    return CapabilityBus(downstream=downstream, contracts=contracts)

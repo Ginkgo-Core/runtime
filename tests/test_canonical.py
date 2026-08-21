@@ -13,6 +13,7 @@ import pytest
 from ginkgo_runtime.canonical import (
     CanonicalisationError,
     canonical_json,
+    fingerprint,
     hash_canonical,
     sha256_hex,
 )
@@ -83,3 +84,65 @@ def test_hash_is_stable_for_equal_values():
 
 def test_hash_differs_for_different_values():
     assert hash_canonical({"a": 1}) != hash_canonical({"a": 2})
+
+
+# ---------------------------------------------------------------------------
+# fingerprint -- the encoding for caller data
+# ---------------------------------------------------------------------------
+
+
+def test_a_float_is_fingerprintable_even_though_it_is_not_canonicalisable():
+    """Found by adversarial review: a legal request crashed the boundary.
+
+    ``CapabilityRequest.input`` is ``additionalProperties: true`` because business
+    payload has to be, so ``{"price": 19.99}`` is an ordinary request. The
+    catalog's stricter primitive refuses floats -- correctly, for a projection --
+    and using it on caller data let any caller take the Bus down.
+    """
+    with pytest.raises(CanonicalisationError):
+        canonical_json({"price": 19.99})
+    assert len(fingerprint({"price": 19.99})) == 64
+
+
+def test_the_fingerprint_is_stable():
+    assert fingerprint({"a": 1, "b": [1, 2]}) == fingerprint({"b": [1, 2], "a": 1})
+
+
+@pytest.mark.parametrize(
+    ("left", "right"),
+    [
+        (1.0, "1.0"),
+        (1, 1.0),
+        (1, "1"),
+        (True, 1),
+        (None, "None"),
+        (None, ""),
+        ([1], "1"),
+    ],
+)
+def test_the_fingerprint_never_collides_across_types(left, right):
+    """Type tagging, and why it is not optional.
+
+    A bare-``repr`` encoding would make the float ``1.0`` and the string ``"1.0"``
+    hash the same. A collision here means two different payloads share an
+    idempotency fingerprint -- a retry with a *different* payload silently
+    treated as the same one, which is a fail-open in the one mechanism that
+    exists to prevent double execution.
+    """
+    assert fingerprint({"v": left}) != fingerprint({"v": right})
+
+
+def test_the_fingerprint_distinguishes_nesting():
+    assert fingerprint({"a": {"b": 1}}) != fingerprint({"a": [["b", 1]]})
+
+
+def test_a_non_finite_number_is_refused():
+    with pytest.raises(CanonicalisationError):
+        fingerprint({"v": float("nan")})
+    with pytest.raises(CanonicalisationError):
+        fingerprint({"v": float("inf")})
+
+
+def test_a_non_json_value_is_refused():
+    with pytest.raises(CanonicalisationError):
+        fingerprint({"v": object()})

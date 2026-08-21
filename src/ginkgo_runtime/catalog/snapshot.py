@@ -13,7 +13,10 @@ written to would be exactly that masquerade.
 * every frozen authority value, so re-pinning ``ai-stack`` to a commit with a
   different capability pattern produces a different catalog even if no record
   changed;
-* every pinned source, by repo, commit SHA, blob id and content digest;
+* every pinned source **the catalog read**, by repo, commit SHA, blob id and
+  content digest -- not every source the repository pins. Other kernel components
+  pin their own frozen contracts into the same manifest, and one of them adding a
+  schema it validates against is not a change in what the catalog means;
 * every admitted record;
 * **every rejection.** A record moving between admitted and rejected changes what
   the catalog means, so it must change the version. Hashing only the admitted
@@ -22,7 +25,7 @@ written to would be exactly that masquerade.
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
@@ -144,12 +147,18 @@ def build_snapshot(
     authority: FrozenAuthority,
     admitted: tuple[AdmittedRecord, ...],
     rejected: tuple[RejectedRecord, ...],
+    consumed: Iterable[str],
 ) -> RuntimeCatalog:
-    """Assemble the immutable snapshot and compute its version."""
+    """Assemble the immutable snapshot and compute its version.
+
+    ``consumed`` is the set of manifest paths this build actually read. Only those
+    reach ``pinned_sources`` and the hash.
+    """
+    read = set(consumed)
     capabilities = [r.as_dict() for r in admitted if r.record_class == "capability"]
     skills = [r.as_dict() for r in admitted if r.record_class == "skill_descriptor"]
     rejections = [r.as_dict() for r in rejected]
-    pinned = manifest.as_hash_input()
+    pinned = [entry for entry in manifest.as_hash_input() if entry["path"] in read]
     authority_view = authority.as_hash_input()
 
     catalog_hash = hash_canonical(

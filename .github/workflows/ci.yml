@@ -53,7 +53,8 @@ jobs:
           for name in ("requests", "httpx", "jsonschema", "pytest", "pydantic"):
               sys.modules[name] = None
           sys.path.insert(0, "src")
-          import ginkgo_runtime.catalog.build  # noqa: F401
+          import ginkgo_runtime.catalog.build   # noqa: F401  RK-07
+          import ginkgo_runtime.bus             # noqa: F401  RK-01
           print("kernel imports with stdlib + PyYAML only")
           PY
 
@@ -80,6 +81,21 @@ jobs:
           from ginkgo_runtime.catalog.build import build_catalog
           catalog = build_catalog()
           print("built offline: %s" % catalog.catalog_version)
+          PY
+
+      - name: The Capability Bus validates against the pinned contracts only
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, "src")
+          from ginkgo_runtime.bus import CapabilityBus, DeterministicDownstream
+          bus = CapabilityBus.from_pinned_contracts(DeterministicDownstream())
+          # Every frozen value the Bus admits against is read from a pinned
+          # schema. Loading raises if any of them is unreadable, so reaching
+          # this line at all is the assertion.
+          print("contract_version=%s pattern=%s"
+                % (bus.contracts.supported_contract_version,
+                   bus.contracts.capability_name_pattern))
           PY
 
       - name: Migration backlog
