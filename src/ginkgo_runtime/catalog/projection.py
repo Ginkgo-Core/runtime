@@ -486,6 +486,20 @@ def _read_routing(
     return projected, []
 
 
+#: ``runtime-skill-descriptor.schema.json`` requires the matching reason whenever
+#: the identity is null, with ``minLength: 8``: *"Do not invent an adapter
+#: identity to fill the generic path; record honestly why no integration boundary
+#: exists."* A null with no reason is an unexplained absence, and RK-02 cannot
+#: emit an honest null from it.
+NOT_APPLICABLE_REASONS = {
+    "adapter_id": "adapter_not_applicable_reason",
+    "provider": "provider_not_applicable_reason",
+}
+
+#: The schema's own floor for a usable reason.
+MIN_REASON_LENGTH = 8
+
+
 def _read_implementation_binding(
     data: Mapping[str, Any],
 ) -> tuple[dict[str, Any] | None, list[Rejection]]:
@@ -503,13 +517,48 @@ def _read_implementation_binding(
             continue
         projected[field] = value
 
-    if reasons:
-        return None, reasons
+    # An honest null needs its reason projected alongside it, or the Domain
+    # Router has nothing truthful to put in `*_not_applicable_reason` and would
+    # have to invent one.
+    #
+    # The gate fires only when the identity is EXPLICITLY declared null, matching
+    # the descriptor schema's own conditional, which carries
+    # `required: [adapter_id]` inside its `if`. A record that never mentions
+    # `adapter_id` has not claimed anything about an adapter -- that is an
+    # undeclared field, reported through `descriptor_gaps`, not a null needing an
+    # explanation. Conflating the two would reject every legacy record for
+    # failing to explain an absence it never asserted.
+    for identity_field, reason_field in NOT_APPLICABLE_REASONS.items():
+        raw = scoped.get(reason_field, data.get(reason_field))
+        value, err = _as_str(raw, "implementation_binding.%s" % reason_field)
+        if err:
+            reasons.append(err)
+            continue
+        projected[reason_field] = value
+
+        declared_null = (
+            identity_field in scoped or identity_field in data
+        ) and projected.get(identity_field) is None
+        if declared_null and (value is None or len(value) < MIN_REASON_LENGTH):
+            reasons.append(
+                Rejection(
+                    "NULL_IDENTITY_WITHOUT_REASON",
+                    "%s is declared null but %s is absent or shorter than %d "
+                    "characters; an unexplained absence cannot be projected as an "
+                    "honest null" % (identity_field, reason_field, MIN_REASON_LENGTH),
+                )
+            )
 
     # Invariant 17, asserted rather than switched: implementation identity is
     # never part of a caller projection.
     projected["caller_visible"] = False
-    return projected, []
+
+    # The projection is returned even when there are findings, so the taxonomy
+    # collision check downstream still sees the identities. Returning None here
+    # meant a record with an unexplained null was reported for that alone and its
+    # `CAPABILITY == SKILL` collision went unnamed -- against the rule that every
+    # failing gate appears in the report, not only the first.
+    return projected, reasons
 
 
 def _descriptor_gaps(data: Mapping[str, Any], authority: FrozenAuthority) -> list[str]:
@@ -617,6 +666,13 @@ def _project_skill_descriptor(
     if reasons:
         return None, reasons, record_id
 
+    # Projected as declared, or null. RK-02 requires it on a ROUTED decision and
+    # will refuse to route without it rather than choosing a default -- a
+    # side-effect class is a governance statement, not a formality.
+    side_effect_class, err = _as_str(data.get("side_effect_class"), "side_effect_class")
+    if err:
+        return None, [*reasons, err], record_id
+
     projection = {
         "advisory_metadata": _advisory(data),
         "capability": capability,
@@ -627,6 +683,7 @@ def _project_skill_descriptor(
         "lifecycle_status": lifecycle or DEFAULT_LIFECYCLE_STATUS,
         "lifecycle_status_declared": lifecycle_declared,
         "routing": routing,
+        "side_effect_class": side_effect_class,
     }
     return projection, [], record_id
 

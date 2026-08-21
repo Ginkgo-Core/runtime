@@ -55,6 +55,19 @@
       "snapshot_path": "catalog/sources/ai-stack/contracts/runtime/runtime-execution-result.schema.json"
     },
     {
+      "blob_sha": "6782e317c527da560673eebca97134315c8fbd92",
+      "collection_key": null,
+      "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
+      "path": "contracts/runtime/runtime-route-decision.schema.json",
+      "record_class": null,
+      "ref": "master",
+      "repo": "Ginkgo-Core/ai-stack",
+      "role": "authority",
+      "sha256": "ffdd6ee4496eb14459c62538567deefaa6aa3788099411bd93e80c92a22da7eb",
+      "size_bytes": 21656,
+      "snapshot_path": "catalog/sources/ai-stack/contracts/runtime/runtime-route-decision.schema.json"
+    },
+    {
       "blob_sha": "5ffb05ed5745c8a7abf16d25394f56870fab2161",
       "collection_key": null,
       "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",

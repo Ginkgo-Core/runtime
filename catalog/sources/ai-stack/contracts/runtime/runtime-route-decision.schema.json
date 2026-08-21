@@ -1,0 +1,798 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Ginkgo-Core/ai-stack/contracts/runtime/runtime-route-decision.schema.json",
+  "title": "Ginkgo RuntimeRouteDecision v1",
+  "description": "INTERNAL, immutable record of one Domain Router resolution. It MUST NOT reach an unprivileged caller projection - that is the concrete enforcement of invariant 17. It deliberately carries NO executor reference: fusing skill selection and executor selection into one decision is the defect this contract exists to prevent (invariant 4, ADR-001). Generalized from the FrozenDecision record already implemented in Ginkgo-Seeds/ginkgo-connect packages/core, minus its rankedFallbacks candidate chain and its chosenExecutorRef.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "decision_id",
+    "request_id",
+    "correlation_id",
+    "capability",
+    "resolved",
+    "execution_mode",
+    "fallback",
+    "catalog",
+    "policy",
+    "routing_reason",
+    "decision_inputs_hash",
+    "decision_hash",
+    "algorithm_version",
+    "resolved_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "ginkgo.runtime-route-decision.v1"
+    },
+    "decision_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "task_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "contract_version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 3,
+          "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$"
+        },
+        "contract_version": {
+          "type": "string",
+          "pattern": "^v[0-9]+$"
+        }
+      }
+    },
+    "resolved": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "outcome"
+      ],
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "ROUTED",
+            "BLOCKED_LIFECYCLE",
+            "BLOCKED_POLICY",
+            "BLOCKED_APPROVAL",
+            "BLOCKED_EXTERNAL_GATE",
+            "NO_ELIGIBLE_ROUTE",
+            "UNKNOWN_CAPABILITY",
+            "UNKNOWN_CONTRACT_VERSION"
+          ],
+          "description": "Every non-ROUTED outcome fails closed and produces a normalized BLOCKED or ERROR CapabilityResult. No substitute route is ever attempted."
+        },
+        "domain": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "skill_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "skill_version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "kind": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "deterministic_domain_skill",
+            "implementation_binding",
+            "provider_binding",
+            null
+          ]
+        },
+        "binding_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "adapter_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "adapter_not_applicable_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1024
+        },
+        "provider": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "provider_not_applicable_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1024
+        },
+        "tool_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        }
+      }
+    },
+    "fallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy",
+        "used"
+      ],
+      "properties": {
+        "policy": {
+          "type": "string",
+          "enum": [
+            "none",
+            "same_semantics_only"
+          ]
+        },
+        "used": {
+          "type": "boolean"
+        },
+        "same_semantics_proof_ref": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "REQUIRED when used is true. Reference to the evidence that domain, semantic action, permission class, read/write behaviour, data classification, lifecycle eligibility, External Gate eligibility and output semantics were all preserved."
+        }
+      },
+      "description": "There is deliberately NO candidate list here. A ranked candidate chain is the fallback shape P0 froze out; the policy authorizes a mode, never a named alternative."
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "routing_eligible",
+        "production_eligible"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "FEATURE",
+            "PROTOTYPE",
+            "VALIDATED",
+            "INTEGRATED",
+            "PRODUCTION",
+            "DEPRECATED",
+            "REJECTED"
+          ]
+        },
+        "routing_eligible": {
+          "type": "boolean"
+        },
+        "production_eligible": {
+          "type": "boolean"
+        }
+      }
+    },
+    "catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "catalog_version",
+        "pinned_refs"
+      ],
+      "properties": {
+        "catalog_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pinned_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "repository",
+              "commit"
+            ],
+            "properties": {
+              "repository": {
+                "type": "string",
+                "minLength": 3
+              },
+              "commit": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$"
+              },
+              "path": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "description": "Exact commit SHAs the Runtime Catalog was projected from. This is what makes a routing decision reproducible after a restart."
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "policy_version",
+        "decision",
+        "policy_snapshot_hash"
+      ],
+      "properties": {
+        "policy_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "ALLOW",
+            "DENY"
+          ]
+        },
+        "policy_snapshot_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "approval": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required",
+            "state"
+          ],
+          "properties": {
+            "required": {
+              "type": "boolean"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "NOT_REQUIRED",
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "EXPIRED"
+              ]
+            },
+            "approval_refs": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "external_gates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "gate_id",
+              "state"
+            ],
+            "properties": {
+              "gate_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "gate_type": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "CLEAR",
+                  "BLOCKED",
+                  "UNKNOWN",
+                  "EXPIRED"
+                ]
+              }
+            }
+          },
+          "description": "Evaluated independently of approval. An APPROVED approval never clears a BLOCKED or UNKNOWN gate (invariant 5)."
+        }
+      }
+    },
+    "constraints_applied": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "deadline": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "max_cost": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "amount",
+                "currency"
+              ],
+              "properties": {
+                "amount": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "currency": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}$"
+                }
+              }
+            }
+          ]
+        },
+        "data_classification": {
+          "type": "string",
+          "enum": [
+            "PUBLIC",
+            "INTERNAL",
+            "CONFIDENTIAL",
+            "RESTRICTED"
+          ]
+        }
+      }
+    },
+    "side_effect_class": {
+      "type": "string",
+      "enum": [
+        "read",
+        "local_transform",
+        "local_analysis",
+        "generate_only",
+        "plan_only",
+        "read_generate",
+        "governed_write",
+        "governed_external_write",
+        "policy_dependent"
+      ]
+    },
+    "routing_reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "input_fingerprint": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 over canonical JSON of the normalized business input. Never the input itself."
+    },
+    "decision_inputs_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "decision_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "algorithm_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "execution_mode": {
+      "type": "string",
+      "enum": [
+        "certification",
+        "non_production",
+        "production"
+      ],
+      "description": "Which execution mode this route authorizes. Frozen invariant 16 says only 'FEATURE never executes in production', so it constrains `production` alone. `certification` is how a FEATURE record earns its E2E certificate without ever entering production - without it the reference slice could never route and Wave 1 would deadlock at its own first step."
+    },
+    "certification_authorization_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 8,
+      "description": "Reference to the recorded certification authorization that permitted this run: it names the skill, the mode and the promotion gate the run exists to satisfy. REQUIRED whenever execution_mode is certification, because certification is the one mode whose ROUTED guard consults neither lifecycle flag - without a recorded authorization it would be an unaudited bypass of the ladder. Null in every other mode."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "fallback": {
+            "properties": {
+              "used": {
+                "const": true
+              }
+            },
+            "required": [
+              "used"
+            ]
+          }
+        },
+        "required": [
+          "fallback"
+        ]
+      },
+      "then": {
+        "properties": {
+          "fallback": {
+            "required": [
+              "same_semantics_proof_ref"
+            ],
+            "properties": {
+              "policy": {
+                "const": "same_semantics_only"
+              },
+              "same_semantics_proof_ref": {
+                "type": "string",
+                "minLength": 8
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "resolved": {
+            "properties": {
+              "outcome": {
+                "const": "ROUTED"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          }
+        },
+        "required": [
+          "resolved"
+        ]
+      },
+      "then": {
+        "required": [
+          "resolved",
+          "side_effect_class",
+          "lifecycle"
+        ],
+        "properties": {
+          "resolved": {
+            "required": [
+              "skill_id",
+              "skill_version",
+              "kind"
+            ],
+            "properties": {
+              "skill_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "skill_version": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "resolved": {
+            "properties": {
+              "outcome": {
+                "const": "ROUTED"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          "execution_mode": {
+            "const": "production"
+          }
+        },
+        "required": [
+          "resolved",
+          "execution_mode"
+        ]
+      },
+      "then": {
+        "properties": {
+          "lifecycle": {
+            "properties": {
+              "routing_eligible": {
+                "const": true
+              },
+              "production_eligible": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "A ROUTED decision serving CALLER traffic requires routing_eligible. execution_mode certification is deliberately excluded: it is the governed, evidence-producing mode a record uses BEFORE it is routable, and gating it on routing_eligible would recreate the circularity where a record needs the certificate to run and the run to earn the certificate. See architecture/runtime/lifecycle-and-promotion.md section 2.",
+      "if": {
+        "properties": {
+          "resolved": {
+            "properties": {
+              "outcome": {
+                "const": "ROUTED"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          },
+          "execution_mode": {
+            "const": "non_production"
+          }
+        },
+        "required": [
+          "resolved",
+          "execution_mode"
+        ]
+      },
+      "then": {
+        "properties": {
+          "lifecycle": {
+            "required": [
+              "routing_eligible"
+            ],
+            "properties": {
+              "routing_eligible": {
+                "const": true
+              }
+            }
+          }
+        },
+        "required": [
+          "lifecycle"
+        ]
+      }
+    },
+    {
+      "$comment": "INTRODUCED_BY_PR45. REJECTED is terminal: no ROUTED decision may select it in any mode, certification included. Section 3 marks every mode 'no' for REJECTED and defines 'no' as 'at any stage of governance'. Forcing both eligibility flags false is not sufficient, because certification consults neither flag - so without this guard a REJECTED record was routable in certification.",
+      "if": {
+        "properties": {
+          "lifecycle": {
+            "properties": {
+              "status": {
+                "const": "REJECTED"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          }
+        },
+        "required": [
+          "lifecycle"
+        ]
+      },
+      "then": {
+        "properties": {
+          "resolved": {
+            "properties": {
+              "outcome": {
+                "not": {
+                  "const": "ROUTED"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "FROZEN invariant 16, enforced on the decision artifact directly against lifecycle.status rather than only transitively through production_eligible. Previously no guard in this schema keyed on lifecycle.status at all.",
+      "if": {
+        "properties": {
+          "lifecycle": {
+            "properties": {
+              "status": {
+                "const": "FEATURE"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "execution_mode": {
+            "const": "production"
+          }
+        },
+        "required": [
+          "lifecycle",
+          "execution_mode"
+        ]
+      },
+      "then": {
+        "properties": {
+          "resolved": {
+            "properties": {
+              "outcome": {
+                "not": {
+                  "const": "ROUTED"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "INTRODUCED_BY_PR45. DEPRECATED may still be certified - a retired record can be re-run to reproduce historical evidence - but may not serve caller traffic in either mode. Section 3.",
+      "if": {
+        "properties": {
+          "lifecycle": {
+            "properties": {
+              "status": {
+                "const": "DEPRECATED"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "execution_mode": {
+            "enum": [
+              "non_production",
+              "production"
+            ]
+          }
+        },
+        "required": [
+          "lifecycle",
+          "execution_mode"
+        ]
+      },
+      "then": {
+        "properties": {
+          "resolved": {
+            "properties": {
+              "outcome": {
+                "not": {
+                  "const": "ROUTED"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "INTRODUCED_BY_PR45. The governance that lifecycle-and-promotion.md section 2 and section 4 invariant 6 require for a certification run had no field anywhere in the change set, so the requirement was unenforceable prose. This makes it part of the artifact.",
+      "if": {
+        "properties": {
+          "execution_mode": {
+            "const": "certification"
+          },
+          "resolved": {
+            "properties": {
+              "outcome": {
+                "const": "ROUTED"
+              }
+            },
+            "required": [
+              "outcome"
+            ]
+          }
+        },
+        "required": [
+          "execution_mode",
+          "resolved"
+        ]
+      },
+      "then": {
+        "required": [
+          "certification_authorization_ref"
+        ],
+        "properties": {
+          "certification_authorization_ref": {
+            "type": "string",
+            "minLength": 8
+          }
+        }
+      }
+    }
+  ],
+  "x-ginkgo-contract-version": "v1",
+  "x-ginkgo-authority": "internal-runtime",
+  "x-ginkgo-authority-status": "INTRODUCED_BY_PR45",
+  "x-ginkgo-authority-note": "This contract becomes authority when ai-stack#45 merges. It is NOT authority in master today. It references contracts/core/* which ARE frozen in master, and it modifies none of them. Lifecycle semantics are normative in architecture/runtime/lifecycle-and-promotion.md section 3.",
+  "x-ginkgo-caller-surface": false,
+  "x-ginkgo-forbidden-fields": [
+    "executor",
+    "executor_id",
+    "executor_ref",
+    "workflow_id",
+    "node_id",
+    "credential",
+    "credential_id",
+    "secret",
+    "api_key",
+    "endpoint",
+    "ranked_fallbacks",
+    "preferred_skill_ids"
+  ]
+}

@@ -101,6 +101,27 @@ def test_the_one_taxonomy_collision_excludes_both_of_its_records(catalog):
     assert catalog.skill("commerce.product.evaluate") is None
 
 
+def test_the_evaluate_descriptor_also_declares_two_unexplained_nulls(catalog):
+    """Both findings are named, not just whichever gate ran first.
+
+    ``features/commerce.product.evaluate.yaml`` declares ``adapter_id: null`` and
+    ``provider: null`` with neither ``*_not_applicable_reason``, *and* uses its
+    capability name as its skill id. An earlier revision returned from the binding
+    projection as soon as it had a finding, so the taxonomy collision went unnamed
+    -- against the rule that the report carries every failing gate.
+    """
+    entry = next(
+        record
+        for record in catalog.rejections
+        if record["record_class"] == "skill_descriptor"
+        and record["record_id"] == "commerce.product.evaluate"
+    )
+    assert sorted({r["code"] for r in entry["reasons"]}) == [
+        "NULL_IDENTITY_WITHOUT_REASON",
+        "TAXONOMY_IDENTIFIER_COLLISION",
+    ]
+
+
 def test_the_local_image_skill_is_excluded_for_its_fallback_policy(catalog):
     """``ai-stack#37``: "fallbacks.policy: explicit ... and no lifecycle_status at all"."""
     codes = reasons_for(catalog, "skills/media/image/generate.local/skill.yaml#$")

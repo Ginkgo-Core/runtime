@@ -130,6 +130,13 @@ REJECTION_REASONS: dict[str, str] = {
         "capability whose own name is also its skill id gives the Domain Router "
         "nothing to resolve."
     ),
+    "NULL_IDENTITY_WITHOUT_REASON": (
+        "A null `adapter_id` or `provider` carries no matching "
+        "`*_not_applicable_reason`. runtime-skill-descriptor.schema.json requires "
+        "one: 'Do not invent an adapter identity to fill the generic path; record "
+        "honestly why no integration boundary exists.' Without it the Domain "
+        "Router has no truthful text to emit and would have to invent it."
+    ),
     # -- governance -------------------------------------------------------
     "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED": (
         "The legacy `human_approval` field is present. It is explicitly not "

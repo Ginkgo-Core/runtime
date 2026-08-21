@@ -233,3 +233,85 @@ def bus(downstream, contracts):
     from ginkgo_runtime.bus import CapabilityBus
 
     return CapabilityBus(downstream=downstream, contracts=contracts)
+
+
+# ---------------------------------------------------------------------------
+# RK-02 Domain Router fixtures
+# ---------------------------------------------------------------------------
+
+#: A descriptor that declares everything RK-02 needs to pin a route.
+#:
+#: It has to be synthetic. At the pinned commits **not one** admitted record
+#: declares `side_effect_class`, and every one is `routing_eligible: false`, so
+#: the real corpus cannot exercise a ROUTED outcome at all. That is a finding
+#: about the registries, not about the router -- `test_rk02_pinned_corpus.py`
+#: asserts it -- and the positive path still has to be tested.
+#:
+#: It is projected through the real RK-07 pipeline from a real manifest, so this
+#: is not a hand-built catalog object: it is the same loader, integrity gate and
+#: admission code the pinned corpus goes through.
+ROUTABLE_DESCRIPTOR = """
+id: rk-reference-echo
+kind: deterministic_domain_skill
+version: 1.0.0
+lifecycle_status: VALIDATED
+capability:
+  name: system.echo.execute
+  contract_version: v1
+fallback_policy: none
+side_effect_class: local_transform
+implementation_binding:
+  skill_id: rk-reference-echo
+  skill_version: 1.0.0
+  tool_id: rk-echo-transform
+  adapter_id: null
+  adapter_not_applicable_reason: >
+    Deterministic in-process transform. No integration boundary exists, so
+    inventing an adapter identity would misrepresent the implementation.
+  provider: null
+  provider_not_applicable_reason: >
+    No external or local provider is invoked. The tool is a pure function.
+routing:
+  discoverable: true
+  routing_eligible: true
+  production_eligible: false
+"""
+
+
+def routable_catalog(tmp_path, descriptor=None, name="record.yaml"):
+    """Build a catalog containing one fully-declared, routable descriptor."""
+    from ginkgo_runtime.catalog.build import build_catalog
+
+    root = make_snapshot(
+        tmp_path,
+        [("features/%s" % name, "skill_descriptor", None, descriptor or ROUTABLE_DESCRIPTOR)],
+    )
+    return build_catalog(root)
+
+
+def routing_context(**overrides):
+    from ginkgo_runtime.router import RoutingContext
+
+    defaults = {
+        "execution_mode": "non_production",
+        "decision_id": "dec-0001",
+        "resolved_at": "2026-08-21T12:00:00Z",
+    }
+    defaults.update(overrides)
+    return RoutingContext(**defaults)
+
+
+def domain_router(catalog, contracts, policy=None):
+    from ginkgo_runtime.router import DomainRouter, StaticPolicy
+
+    return DomainRouter(
+        catalog=catalog,
+        policy=policy or StaticPolicy.allowing(),
+        contracts=contracts,
+    )
+
+
+@pytest.fixture
+def routable(tmp_path, contracts):
+    """A router over a one-record routable catalog."""
+    return domain_router(routable_catalog(tmp_path), contracts)
