@@ -152,10 +152,6 @@ class SourceManifest:
     def as_hash_input(self) -> list[dict[str, object]]:
         return [source.as_hash_input() for source in self.sources]
 
-    def pins(self) -> Mapping[str, str]:
-        """``repo -> commit_sha``, for the report header."""
-        return {source.repo: source.commit_sha for source in self.sources}
-
 
 def _require(entry: Mapping[str, object], key: str, index: int) -> object:
     if key not in entry:

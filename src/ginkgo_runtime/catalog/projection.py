@@ -372,8 +372,21 @@ def _read_fallback_policy(
         legacy_policy, err = _as_str(legacy.get("policy"), "fallbacks.policy")
         if err:
             reasons.append(err)
-        elif legacy_policy is not None and declared is None:
-            declared = legacy_policy
+        elif legacy_policy is not None:
+            if declared is None:
+                declared = legacy_policy
+            elif legacy_policy != declared:
+                # Both dialects declared, and they disagree. Preferring either one
+                # would silently discard a governance declaration the record makes;
+                # the record has to say one thing.
+                reasons.append(
+                    Rejection(
+                        "FALLBACK_POLICY_CONTRADICTION",
+                        "fallback_policy is %r and fallbacks.policy is %r; the "
+                        "catalog does not choose between two declarations"
+                        % (declared, legacy_policy),
+                    )
+                )
         order = legacy.get("order")
         if isinstance(order, list) and order:
             reasons.append(
@@ -409,11 +422,25 @@ def _read_fallback_policy(
 
 
 def _read_routing(
-    data: Mapping[str, Any], lifecycle_status: str
+    data: Mapping[str, Any], lifecycle_status: str | None
 ) -> tuple[dict[str, Any] | None, list[Rejection]]:
     """Project the tri-state, fail closed, and reject an over-claim rather than clamp it."""
     reasons: list[Rejection] = []
     block = data.get("routing")
+    if block is not None and not isinstance(block, dict):
+        # The linter says the same thing as P0-LIFE-003: "routing must be a
+        # mapping; a malformed eligibility block fails closed". Falling through to
+        # the top-level dialect here would read an unparseable eligibility block as
+        # "declares nothing" and admit the record at the fail-closed defaults --
+        # which looks identical to a conformant record in the catalog.
+        return None, [
+            Rejection(
+                "FIELD_TYPE_NON_CONFORMANT",
+                "routing must be a mapping; found %s. A malformed eligibility "
+                "block fails closed rather than reading as an absent one."
+                % type(block).__name__,
+            )
+        ]
     scoped: Mapping[str, Any] = block if isinstance(block, dict) else {}
 
     projected: dict[str, Any] = {}
@@ -436,7 +463,9 @@ def _read_routing(
     if reasons:
         return None, reasons
 
-    ceiling = LIFECYCLE_CEILINGS.get(lifecycle_status)
+    # `None` means the record declared a lifecycle the ladder does not contain.
+    # It is already rejected for that; there is no stage whose ceiling applies.
+    ceiling = None if lifecycle_status is None else LIFECYCLE_CEILINGS.get(lifecycle_status)
     if ceiling is not None:
         for field, permitted in ceiling.items():
             if projected.get(field) and not permitted:
@@ -558,7 +587,12 @@ def _project_skill_descriptor(
                 % (lifecycle, list(authority.lifecycle_status_enum)),
             )
         )
-        lifecycle = DEFAULT_LIFECYCLE_STATUS
+        # Deliberately NOT defaulted to FEATURE here. The FEATURE default exists for
+        # a record that declares no lifecycle at all; applying it to one that
+        # declared an unreadable value would add a ceiling finding naming a stage
+        # the record never claimed, and the report is a migration backlog someone
+        # has to act on.
+        lifecycle = None
 
     capability, capability_reasons = _read_capability(data, authority, kind)
     reasons.extend(capability_reasons)
@@ -590,7 +624,7 @@ def _project_skill_descriptor(
         "fallback_policy": fallback_policy,
         "implementation_binding": binding,
         "kind": kind,
-        "lifecycle_status": lifecycle,
+        "lifecycle_status": lifecycle or DEFAULT_LIFECYCLE_STATUS,
         "lifecycle_status_declared": lifecycle_declared,
         "routing": routing,
     }

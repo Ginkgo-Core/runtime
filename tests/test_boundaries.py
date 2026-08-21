@@ -138,10 +138,16 @@ def test_the_build_writes_nothing(tmp_path):
     builtins.open = guarded
     try:
         build_catalog(REPO_ROOT)
+        observed_during_build = list(attempted)
+        # Prove the guard can fire before trusting that it did not. An empty list
+        # is only evidence if a real write would have filled it.
+        with guarded(os.path.join(tmp_path, "probe"), "w") as probe:
+            probe.write("x")
     finally:
         builtins.open = real_open
 
-    assert attempted == []
+    assert observed_during_build == []
+    assert attempted, "the write guard never fired, so the assertion above proved nothing"
 
 
 def test_the_pinned_snapshot_is_unchanged_by_a_build():

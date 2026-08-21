@@ -99,6 +99,11 @@ REJECTION_REASONS: dict[str, str] = {
         "contracts/core/capability-request.schema.json (invariants 6 and 7). "
         "`explicit` is not a frozen policy."
     ),
+    "FALLBACK_POLICY_CONTRADICTION": (
+        "`fallback_policy` and the legacy `fallbacks.policy` are both declared and "
+        "disagree. Preferring either one would silently discard a governance "
+        "declaration the record makes, so the record has to say one thing."
+    ),
     "FALLBACK_NAMED_CANDIDATE_CHAIN": (
         "A named fallback candidate list is declared. A policy authorises a MODE "
         "and never names a candidate (invariant 7)."

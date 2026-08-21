@@ -258,6 +258,51 @@ def test_a_non_boolean_eligibility_flag_is_rejected(tmp_path):
     assert "FIELD_TYPE_NON_CONFORMANT" in codes(one_record(tmp_path, record))
 
 
+def test_a_malformed_routing_block_fails_closed(tmp_path):
+    """`routing: round-robin` is not an absent eligibility block.
+
+    Found by adversarial review: falling through to the top-level dialect read an
+    unparseable block as "declares nothing" and admitted the record at the
+    fail-closed defaults -- indistinguishable in the catalog from a conformant
+    record. The static linter says the same thing as `P0-LIFE-003`.
+    """
+    catalog = one_record(tmp_path, CONFORMANT + "routing: round-robin\n")
+    assert catalog.admitted_count == 0
+    assert codes(catalog) == ["FIELD_TYPE_NON_CONFORMANT"]
+
+
+def test_two_contradictory_fallback_declarations_are_rejected(tmp_path):
+    """The record has to say one thing.
+
+    Also from adversarial review: `fallback_policy: none` beside
+    `fallbacks.policy: explicit` resolved silently to `none`, discarding a
+    governance declaration the record actually makes.
+    """
+    record = CONFORMANT + "fallbacks:\n  policy: explicit\n"
+    assert codes(one_record(tmp_path, record)) == ["FALLBACK_POLICY_CONTRADICTION"]
+
+
+def test_two_agreeing_fallback_declarations_are_admitted(tmp_path):
+    """The rule bars a contradiction, not the presence of both dialects."""
+    record = CONFORMANT + "fallbacks:\n  policy: none\n"
+    catalog = one_record(tmp_path, record)
+    assert catalog.admitted_count == 1
+    assert catalog.skill("system.echo.reference")["fallback_policy"] == "none"
+
+
+def test_an_unknown_lifecycle_yields_no_ceiling_finding(tmp_path):
+    """One accurate reason, not two, one of which names a stage never declared.
+
+    The FEATURE default is for a record that declares no lifecycle at all.
+    Applying it to a record that declared an unreadable one produced a ceiling
+    finding against FEATURE -- a migration backlog entry telling a maintainer to
+    fix something they never wrote.
+    """
+    record = CONFORMANT.replace("lifecycle_status: FEATURE", "lifecycle_status: S2")
+    record += "routing:\n  routing_eligible: true\n"
+    assert codes(one_record(tmp_path, record)) == ["UNKNOWN_LIFECYCLE_STATUS"]
+
+
 # -- taxonomy --------------------------------------------------------------
 
 
