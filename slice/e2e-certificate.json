@@ -1,0 +1,100 @@
+{
+  "algorithm_versions": {
+    "domain_router": "ginkgo.domain-router.v1"
+  },
+  "artifact_fingerprints": {
+    "capability_result": "9b2982bf3e1ea98a05da08a44c015b08b8b6cee40921627d07a25ec4df29ade6",
+    "events": "dec5f5c86ce955d75326609a6df6dbe59158e42e37bb4b84ef146a5ca91cbb06",
+    "evidence": "8db560f26195e818b78d4be947adbffd635a5229a71107ae865c9cfcac9e670d",
+    "execution_result": "f1c14f21eda579767e8bad133d58ac88fa2ec021d9ca52745b3cf0c64d4053fa",
+    "input_fingerprint": "8109e57f7164e6e2505a3995fcc64538b9faddf943007989ec6d2572b6062ded",
+    "route_decision": "b1314c9a2b874a17254633b96294012c7f2f9592ad228d9585b9838ae7798bd0"
+  },
+  "capability": {
+    "contract_version": "v1",
+    "name": "system.echo.execute"
+  },
+  "catalog_version": "rkc1-37d3ea2b655c9b29",
+  "certificate_hash": "ef2c2f5326b1c9c13c538069d5b89f31a2841ac1e9ab1d29c1f7f3548f904729",
+  "certificate_version": "ginkgo.runtime-e2e-certificate.v1",
+  "certification_authorization_ref": "cert-auth-rk-reference-echo-0001",
+  "chain": [
+    "RK-01 Capability Bus",
+    "RK-02 Domain Router",
+    "RK-04 Policy + Lifecycle Gate",
+    "RK-08A Executor Contract",
+    "RK-09 rk-reference-echo / rk-echo-transform",
+    "RK-06 Evidence Writer"
+  ],
+  "evidence": {
+    "event_count": 3,
+    "event_types": [
+      "runtime.execution.queued",
+      "runtime.execution.running",
+      "runtime.execution.succeeded"
+    ],
+    "evidence_id": "ev-81cf8d3382da0fdab3bd8b2fd79ad80b",
+    "kind": "TEST",
+    "knowledge_promotion": {
+      "knowledge_ref": null,
+      "status": "NOT_REQUESTED"
+    },
+    "record_count": 1
+  },
+  "execution_mode": "certification",
+  "hashes": {
+    "decision_inputs_hash": "8f6346c7bdce286280e26bfba41ce6f0a697286e1c9d02cf304cffe5de35aef1",
+    "evidence_integrity_sha256": "c3cb2f15cccb09dd434fc9eb62bf630d5708cc8969cdbffdc4b1743bb660753b",
+    "input_fingerprint": "8109e57f7164e6e2505a3995fcc64538b9faddf943007989ec6d2572b6062ded",
+    "policy_snapshot_hash": "7f76799e2e3444a2df64d0de97e5980f628131cd15397b0ef6cbb062a85b49b3",
+    "route_decision_hash": "047a6625d73f6c4cdc7da8d1f43d9fcfd83f14391dc808362347afe10b6ec6f1"
+  },
+  "lifecycle": {
+    "production_eligible": false,
+    "routing_eligible": false,
+    "status": "FEATURE"
+  },
+  "negative_proofs": {
+    "credentials_in_ci": "none",
+    "live_provider_validation_proven": false,
+    "mutations": "OFF",
+    "network": "OFF"
+  },
+  "pinned_refs": [
+    {
+      "commit": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
+      "path": null,
+      "repository": "Ginkgo-Core/ai-stack"
+    },
+    {
+      "commit": "89247220ffa15238cff209dba13088eae1a1a641",
+      "path": null,
+      "repository": "Ginkgo-Core/ginkgo-agents"
+    },
+    {
+      "commit": "a9943567458f94a4737c2b08bd441e9aff01071f",
+      "path": null,
+      "repository": "Ginkgo-Core/ginkgo-library"
+    }
+  ],
+  "promotion": {
+    "automatic_promotion": false,
+    "lifecycle_unchanged": "FEATURE",
+    "note": "This certificate is evidence for a promotion decision and is not that decision. FEATURE -> PROTOTYPE requires the fifteen gates in lifecycle-and-promotion.md section 6 and a recorded human decision."
+  },
+  "proves_nothing_about": [
+    "any provider, adapter, credential or network path",
+    "n8n, ComfyUI, Pyre or any executor",
+    "cross-process teardown -- RK-09 is in-process, which is why RK-08B is Wave 2"
+  ],
+  "resolved": {
+    "adapter_id": null,
+    "adapter_not_applicable_reason": "Deterministic in-process transform. No integration boundary exists, so inventing an adapter identity would misrepresent the implementation.",
+    "provider": null,
+    "provider_not_applicable_reason": "No external or local provider is invoked. The tool is a pure function.",
+    "skill_id": "rk-reference-echo",
+    "skill_version": "1.0.0",
+    "tool_id": "rk-echo-transform"
+  },
+  "status": "SUCCESS"
+}

@@ -1,0 +1,386 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Ginkgo-Core/ai-stack/contracts/runtime/runtime-execution-request.schema.json",
+  "title": "Ginkgo RuntimeExecutionRequest v1",
+  "description": "INTERNAL execution envelope handed to an executor implementation. This is the ONLY lawful home for max_iterations, max_tool_calls, backoff and lease parameters - they have no equivalent in the frozen CapabilityRequest v1 and adding them there would require a new contract version and an ADR. The envelope carries credential REFERENCES only, never values, and never names an engine, workflow, node or credential id in any caller-reachable form.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "execution_id",
+    "request_id",
+    "correlation_id",
+    "idempotency_key",
+    "decision_ref",
+    "bounds",
+    "retry_policy",
+    "evidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "ginkgo.runtime-execution-request.v1"
+    },
+    "execution_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Propagates unchanged from CapabilityRequest v1 through every execution and every event."
+    },
+    "task_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "description": "Carried from CapabilityRequest v1. A replay with the same key and the same payload returns the same RuntimeExecutionResult and writes NO second evidence record. A conflicting payload under the same key is a CONFLICT. This field is distinct from request_id; conflating the two is a known defect in an existing runtime."
+    },
+    "decision_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_id",
+        "decision_hash"
+      ],
+      "properties": {
+        "decision_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "description": "The executor receives a REFERENCE to the RuntimeRouteDecision, not routing authority. It may not re-resolve, substitute or override the decision."
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempt_number"
+      ],
+      "properties": {
+        "attempt_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "previous_attempt_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "materially_different_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2048,
+          "description": "REQUIRED when attempt_number > 1. A retry requires BOTH a retryable failure class AND a materially different next attempt or new evidence."
+        }
+      }
+    },
+    "bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "timeout_ms"
+      ],
+      "properties": {
+        "deadline": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "Mirrors the frozen constraints.deadline. The caller-visible bound."
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 300000,
+          "default": 60000
+        },
+        "max_iterations": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "max_tool_calls": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "max_cost": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "amount",
+                "currency"
+              ],
+              "properties": {
+                "amount": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "currency": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}$"
+                }
+              }
+            }
+          ],
+          "description": "Mirrors the frozen constraints.max_cost OBJECT shape. A bare number is invalid."
+        }
+      }
+    },
+    "retry_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_attempts",
+        "backoff",
+        "retryable_categories"
+      ],
+      "properties": {
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "default": 1
+        },
+        "backoff": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "strategy"
+          ],
+          "properties": {
+            "strategy": {
+              "type": "string",
+              "enum": [
+                "none",
+                "fixed",
+                "exponential"
+              ]
+            },
+            "initial_ms": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "max_ms": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          }
+        },
+        "retryable_categories": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "TIMEOUT",
+              "RATE_LIMIT",
+              "PROVIDER",
+              "INTERNAL"
+            ]
+          },
+          "description": "VALIDATION, POLICY, APPROVAL, EXTERNAL_GATE, ROUTING and CONFLICT are never retryable. Retry is executor-internal and may never become Domain Router fallback."
+        },
+        "dead_letter_on_exhaustion": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "description": "Retry is executor-internal only and may never become Domain Router fallback. RESERVED beyond max_attempts:1 - v1's only execution path is a deterministic in-process transform with nothing to retry."
+    },
+    "cancellation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cancellable": {
+          "type": "boolean",
+          "default": true
+        },
+        "cancel_token": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        }
+      },
+      "description": "Cancellation is a first-class transition to `cancelled`, not an error. RESERVED - no v1 consumer. RK-09 is in-process and its teardown is provable by assertion; this field is populated from Wave 2, when RK-08B introduces a cross-process executor."
+    },
+    "lease": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lease_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "lease_ttl_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1000
+        },
+        "expected_version": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Optimistic concurrency token. The pattern is already implemented and tested in Ginkgo-Seeds/ginkgo-connect packages/core."
+        }
+      },
+      "description": " RESERVED - no v1 consumer. RK-09 is in-process and its teardown is provable by assertion; this field is populated from Wave 2, when RK-08B introduces a cross-process executor."
+    },
+    "credential_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Credential IDENTIFIERS resolved by the adapter layer. A secret value here is a contract violation. An executor never obtains or selects provider credentials directly."
+    },
+    "input_fingerprint": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "kinds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "TEST",
+              "EVAL",
+              "PR",
+              "COMMIT",
+              "REPORT",
+              "LOG",
+              "API_OBSERVATION",
+              "HUMAN_ATTESTATION",
+              "ARTIFACT",
+              "POLICY_CHECK",
+              "OTHER"
+            ]
+          },
+          "description": "Constrained to the frozen contracts/core/evidence.schema.json kind enum. The executor produces telemetry; RK-06 writes the evidence record."
+        },
+        "independent_validation_required": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, the executor's self-reported success is not sufficient evidence of success."
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "attempt": {
+            "properties": {
+              "attempt_number": {
+                "minimum": 2
+              }
+            },
+            "required": [
+              "attempt_number"
+            ]
+          }
+        },
+        "required": [
+          "attempt"
+        ]
+      },
+      "then": {
+        "properties": {
+          "attempt": {
+            "required": [
+              "materially_different_reason"
+            ],
+            "properties": {
+              "materially_different_reason": {
+                "type": "string",
+                "minLength": 8
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "x-ginkgo-contract-version": "v1",
+  "x-ginkgo-authority": "internal-runtime",
+  "x-ginkgo-authority-status": "INTRODUCED_BY_PR45",
+  "x-ginkgo-authority-note": "This contract becomes authority when ai-stack#45 merges. It is NOT authority in master today. It references contracts/core/* which ARE frozen in master, and it modifies none of them. Lifecycle semantics are normative in architecture/runtime/lifecycle-and-promotion.md section 3.",
+  "x-ginkgo-caller-surface": false,
+  "x-ginkgo-forbidden-fields": [
+    "engine",
+    "engine_version",
+    "workflow_id",
+    "node_id",
+    "credential",
+    "credential_value",
+    "secret",
+    "api_key",
+    "access_token",
+    "endpoint",
+    "command",
+    "args",
+    "path",
+    "script",
+    "shell_command"
+  ]
+}

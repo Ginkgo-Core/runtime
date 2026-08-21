@@ -382,3 +382,35 @@ def gate(contracts):
         return evaluate(request, contracts)
 
     return run
+
+
+# ---------------------------------------------------------------------------
+# The reference slice (RK-08A + RK-09 + RK-06 + RK-10)
+# ---------------------------------------------------------------------------
+
+
+def slice_request(**overrides):
+    """The canonical ``system.echo.execute`` request."""
+    request = capability_request(
+        request_id="req-slice-0001",
+        correlation_id="corr-slice-0001",
+        capability={"name": "system.echo.execute", "contract_version": "v1"},
+        input={"message": "hello from the reference slice"},
+        idempotency_key="idem-slice-0001",
+    )
+    request.update(overrides)
+    return request
+
+
+@pytest.fixture
+def reference_kernel():
+    """The whole kernel, assembled for a certification run."""
+    from ginkgo_runtime.slice import build_reference_kernel
+
+    return build_reference_kernel()
+
+
+@pytest.fixture
+def slice_run(reference_kernel):
+    """One completed pass through the whole chain."""
+    return reference_kernel.submit(slice_request())

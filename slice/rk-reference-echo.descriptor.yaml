@@ -1,0 +1,67 @@
+# RK-09 -- the reference deterministic skill.
+#
+# The canonical instance of RuntimeSkillDescriptor v1, transcribed from
+# `ai-stack` architecture/runtime/reference-slice.md section 4. It proves the
+# BOUNDARY, not the usefulness of the capability.
+#
+# It lives in this repository rather than in `ginkgo-agents` because it is a
+# kernel diagnostic, not a business skill: `system.*` is a reserved
+# kernel-diagnostics namespace and must never accumulate business semantics.
+# Moving it to `ginkgo-agents` later is a manifest re-pin and nothing else.
+#
+# `routing_eligible` stays false until RK-10 emits the E2E certificate. The
+# reference skill is subject to exactly the same lifecycle law as a business
+# skill -- that is the point of it.
+schema_version: ginkgo.runtime-skill-descriptor.v1
+id: rk-reference-echo
+kind: deterministic_domain_skill
+version: 1.0.0
+lifecycle_status: FEATURE
+
+capability:
+  name: system.echo.execute
+  contract_version: v1
+
+caller_contract:
+  request: CapabilityRequest v1
+  request_schema_ref: contracts/core/capability-request.schema.json
+  result: CapabilityResult v1
+  result_schema_ref: contracts/core/capability-result.schema.json
+  caller_selects: [capability, input, constraints, governance, evidence, idempotency_key]
+  domain_router_resolves: [skill_id, skill_version, adapter_id, provider]
+
+implementation_binding:
+  skill_id: rk-reference-echo
+  skill_version: 1.0.0
+  adapter_id: null
+  adapter_not_applicable_reason: >
+    Deterministic in-process transform. No integration boundary exists, so
+    inventing an adapter identity would misrepresent the implementation.
+  provider: null
+  provider_not_applicable_reason: >
+    No external or local provider is invoked. The tool is a pure function.
+  tool_id: rk-echo-transform
+  caller_visible: false
+
+fallback_policy: none
+
+approval:
+  required: false
+
+external_gates: []
+
+permissions:
+  network: none
+  filesystem_write: false
+  shell: false
+  external_side_effects: false
+  secrets:
+    caller_access: forbidden
+    adapter_managed_refs: []
+
+side_effect_class: local_transform
+
+routing:
+  discoverable: true
+  routing_eligible: false
+  production_eligible: false

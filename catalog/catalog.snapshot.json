@@ -225,8 +225,8 @@
       "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
     }
   ],
-  "catalog_hash": "1ac7e9d1465729058ba6b4a5ffcd2c22b7a8bab6f0d85791ca2a6564eceabd88",
-  "catalog_version": "rkc1-1ac7e9d146572905",
+  "catalog_hash": "37d3ea2b655c9b298f580822d45a98847ae2b5dbc7864d150cacb036e22f8df0",
+  "catalog_version": "rkc1-37d3ea2b655c9b29",
   "pinned_sources": [
     {
       "blob_sha": "a161b1ed843decca2512288e730c3890b6797ecc",
@@ -407,6 +407,18 @@
       "role": "projected",
       "sha256": "1b3d9d65b4b972d6e085cb25e6dc1a63706292c3d5f48a087bac28b1cafdaf72",
       "size_bytes": 20717
+    },
+    {
+      "blob_sha": "ff0392e37f604bb3e75f3bafac8deb77d7f0b46f",
+      "collection_key": null,
+      "commit_sha": "",
+      "path": "slice/rk-reference-echo.descriptor.yaml",
+      "record_class": "skill_descriptor",
+      "ref": "HEAD",
+      "repo": "Ginkgo-Core/ginkgo-runtime",
+      "role": "kernel",
+      "sha256": "489f3bbbb9a09d5a433dc448676181aa7e1ad43925f6595d1163ab82e9aa057a",
+      "size_bytes": 2154
     }
   ],
   "rejections": [
@@ -1215,6 +1227,44 @@
       },
       "side_effect_class": null,
       "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.amazon.pricing.read.yaml"
+    },
+    {
+      "advisory_metadata": {},
+      "capability": {
+        "contract_version": "v1",
+        "name": "system.echo.execute"
+      },
+      "descriptor_gaps": [],
+      "fallback_policy": "none",
+      "implementation_binding": {
+        "adapter_id": null,
+        "adapter_not_applicable_reason": "Deterministic in-process transform. No integration boundary exists, so inventing an adapter identity would misrepresent the implementation.",
+        "binding_id": null,
+        "caller_visible": false,
+        "provider": null,
+        "provider_not_applicable_reason": "No external or local provider is invoked. The tool is a pure function.",
+        "skill_id": "rk-reference-echo",
+        "skill_version": "1.0.0",
+        "tool_id": "rk-echo-transform"
+      },
+      "kind": "deterministic_domain_skill",
+      "lifecycle_status": "FEATURE",
+      "lifecycle_status_declared": true,
+      "record_class": "skill_descriptor",
+      "record_id": "rk-reference-echo",
+      "record_ref": "Ginkgo-Core/ginkgo-runtime@blob:ff0392e37f604bb3e75f3bafac8deb77d7f0b46f:slice/rk-reference-echo.descriptor.yaml#$",
+      "routing": {
+        "declared": {
+          "discoverable": true,
+          "production_eligible": true,
+          "routing_eligible": true
+        },
+        "discoverable": true,
+        "production_eligible": false,
+        "routing_eligible": false
+      },
+      "side_effect_class": "local_transform",
+      "source_ref": "Ginkgo-Core/ginkgo-runtime@blob:ff0392e37f604bb3e75f3bafac8deb77d7f0b46f:slice/rk-reference-echo.descriptor.yaml"
     },
     {
       "advisory_metadata": {

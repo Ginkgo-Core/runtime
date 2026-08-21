@@ -1,7 +1,7 @@
 {
   "algorithm_version": "ginkgo.runtime-catalog.v1",
-  "catalog_hash": "1ac7e9d1465729058ba6b4a5ffcd2c22b7a8bab6f0d85791ca2a6564eceabd88",
-  "catalog_version": "rkc1-1ac7e9d146572905",
+  "catalog_hash": "37d3ea2b655c9b298f580822d45a98847ae2b5dbc7864d150cacb036e22f8df0",
+  "catalog_version": "rkc1-37d3ea2b655c9b29",
   "pinned_sources": [
     {
       "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
@@ -92,6 +92,12 @@
       "path": "registry/skills.yaml",
       "repo": "Ginkgo-Core/ginkgo-library",
       "role": "projected"
+    },
+    {
+      "commit_sha": "",
+      "path": "slice/rk-reference-echo.descriptor.yaml",
+      "repo": "Ginkgo-Core/ginkgo-runtime",
+      "role": "kernel"
     }
   ],
   "records": [
@@ -717,9 +723,9 @@
     }
   ],
   "totals": {
-    "admitted": 20,
+    "admitted": 21,
     "admitted_capabilities": 13,
-    "admitted_skills": 7,
+    "admitted_skills": 8,
     "rejected": 37,
     "rejected_by_reason": {
       "CAPABILITY_CONTRACT_VERSION_MISSING": 24,

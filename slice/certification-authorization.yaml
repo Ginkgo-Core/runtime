@@ -1,0 +1,20 @@
+# The recorded certification authorization the ladder requires.
+#
+# lifecycle-and-promotion.md section 3: a "permitted, governed" run requires
+# "a recorded authorization that names the skill, the mode and the gate the run
+# exists to satisfy". Without one a certification run would be an unaudited
+# bypass of the ladder, since certification consults neither eligibility flag.
+#
+# This authorizes ONE run of ONE skill in ONE mode. It promotes nothing.
+authorization_id: cert-auth-rk-reference-echo-0001
+skill_id: rk-reference-echo
+skill_version: 1.0.0
+capability: system.echo.execute
+execution_mode: certification
+gate: RK-10 runtime E2E certificate
+promotes_lifecycle: false
+authorized_by: Ginkgo-Core/ai-stack#38
+note: >
+  Authorizes the evidence-producing run only. Promotion FEATURE -> PROTOTYPE
+  requires the fifteen gates in lifecycle-and-promotion.md section 6 and a
+  recorded human decision. This document is not that decision.

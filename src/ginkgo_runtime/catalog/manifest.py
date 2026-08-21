@@ -35,7 +35,13 @@ from dataclasses import dataclass
 from ..canonical import sha256_hex
 from .errors import CatalogBuildError, SourceIntegrityError, SourceUnavailableError
 
-__all__ = ["FORBIDDEN_SOURCE_BASENAMES", "PinnedSource", "SourceManifest", "load_manifest"]
+__all__ = [
+    "FORBIDDEN_SOURCE_BASENAMES",
+    "PROJECTING_ROLES",
+    "PinnedSource",
+    "SourceManifest",
+    "load_manifest",
+]
 
 MANIFEST_SCHEMA_VERSION = "ginkgo.runtime-catalog.source-manifest.v1"
 
@@ -45,9 +51,27 @@ FORBIDDEN_SOURCE_BASENAMES = frozenset(
     {"providers.yaml", "tools.yaml", "endpoints.yaml"}
 )
 
-#: A source is either a frozen contract the catalog admits *against*, or a
-#: registry record set the catalog *projects*. Nothing else is pinnable.
-VALID_ROLES = frozenset({"authority", "projected"})
+#: What a pinned source is for.
+#:
+#: ``authority``  a frozen contract the catalog admits *against*, never projects.
+#: ``projected``  an upstream registry record set, pinned to an upstream commit.
+#: ``kernel``     a record this repository itself owns.
+#:
+#: The third exists for exactly one thing: RK-09's reference descriptor.
+#: ``system.*`` is a reserved kernel-diagnostics namespace, so the reference
+#: skill is a kernel artifact rather than a business skill, and there is no
+#: upstream commit to pin it to -- it lives at this repository's HEAD, which git
+#: already pins. Its integrity is still enforced by the same ``sha256`` gate as
+#: every other source, so it cannot drift unnoticed.
+#:
+#: A kernel source carries ``commit_sha: null``. That is the one relaxation, and
+#: it is why the role is separate rather than reusing ``projected``: an upstream
+#: source with no commit would be an unpinned projection, and that must stay
+#: impossible.
+VALID_ROLES = frozenset({"authority", "kernel", "projected"})
+
+#: Roles that carry records into the catalog.
+PROJECTING_ROLES = frozenset({"kernel", "projected"})
 
 #: The two record classes the catalog projects. A capability record is a public
 #: semantic contract; a skill descriptor is an internal implementation record
@@ -82,8 +106,13 @@ class PinnedSource:
 
     @property
     def source_ref(self) -> str:
-        """The provenance string carried on every projected record and rejection."""
-        return "%s@%s:%s" % (self.repo, self.commit_sha, self.path)
+        """The provenance string carried on every projected record and rejection.
+
+        A kernel-owned source has no upstream commit, so it names its content
+        digest instead -- the identity that is actually pinned.
+        """
+        pin = self.commit_sha or "blob:%s" % self.blob_sha
+        return "%s@%s:%s" % (self.repo, pin, self.path)
 
     def as_hash_input(self) -> dict[str, object]:
         return {
@@ -116,7 +145,8 @@ class SourceManifest:
         )
 
     def projected(self) -> tuple[PinnedSource, ...]:
-        return tuple(s for s in self.sources if s.role == "projected")
+        """Every source that carries records, upstream or kernel-owned."""
+        return tuple(s for s in self.sources if s.role in PROJECTING_ROLES)
 
     def read(self, path: str) -> bytes:
         """Return the pinned bytes for ``path``, failing closed on absence or drift."""
@@ -194,15 +224,24 @@ def load_manifest(
 
         repo = str(_require(entry, "repo", index))
         path = str(_require(entry, "path", index))
-        commit_sha = str(_require(entry, "commit_sha", index))
         role = str(_require(entry, "role", index))
+        _require(entry, "commit_sha", index)
+        commit_sha = "" if entry["commit_sha"] is None else str(entry["commit_sha"])
 
         if role not in VALID_ROLES:
             raise CatalogBuildError(
                 "manifest source %d declares role %r; expected one of %s"
                 % (index, role, sorted(VALID_ROLES))
             )
-        if len(commit_sha) != 40 or not all(c in "0123456789abcdef" for c in commit_sha):
+        if role == "kernel":
+            if entry.get("commit_sha") is not None:
+                raise CatalogBuildError(
+                    "manifest source %d has role 'kernel' and must carry "
+                    "commit_sha: null; a kernel source is pinned by this "
+                    "repository's own history, not by an upstream commit" % index
+                )
+            commit_sha = ""
+        elif len(commit_sha) != 40 or not all(c in "0123456789abcdef" for c in commit_sha):
             raise CatalogBuildError(
                 "manifest source %d pins %r, which is not a full 40-hex commit SHA; "
                 "a branch name or short SHA is not a pin" % (index, commit_sha)
@@ -224,7 +263,7 @@ def load_manifest(
 
         record_class = entry.get("record_class")
         collection_key = entry.get("collection_key")
-        if role == "projected":
+        if role in PROJECTING_ROLES:
             if record_class not in VALID_RECORD_CLASSES:
                 raise CatalogBuildError(
                     "manifest source %d is projected but declares record_class %r; "

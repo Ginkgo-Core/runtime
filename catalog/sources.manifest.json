@@ -55,6 +55,32 @@
       "snapshot_path": "catalog/sources/ai-stack/contracts/core/error.schema.json"
     },
     {
+      "blob_sha": "65be680937b5ea7386435039df7a9a88322ce762",
+      "collection_key": null,
+      "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
+      "path": "contracts/core/event.schema.json",
+      "record_class": null,
+      "ref": "master",
+      "repo": "Ginkgo-Core/ai-stack",
+      "role": "authority",
+      "sha256": "60c451449c609c9e342c7be2d72dfa93aa3bef66f1b0bfc5dc33d97cf63d69e1",
+      "size_bytes": 1239,
+      "snapshot_path": "catalog/sources/ai-stack/contracts/core/event.schema.json"
+    },
+    {
+      "blob_sha": "9d1960e3c7d73f184e7999ba0e9ee4dda68197ee",
+      "collection_key": null,
+      "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
+      "path": "contracts/core/evidence.schema.json",
+      "record_class": null,
+      "ref": "master",
+      "repo": "Ginkgo-Core/ai-stack",
+      "role": "authority",
+      "sha256": "36e54d889bbb1c51e148c176f466e3d70dc32cd9a0e7ae506a22b5ce5cfdb1e0",
+      "size_bytes": 1772,
+      "snapshot_path": "catalog/sources/ai-stack/contracts/core/evidence.schema.json"
+    },
+    {
       "blob_sha": "496b888235f1c0a4f23898aa851a7c3a0756655b",
       "collection_key": null,
       "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
@@ -66,6 +92,19 @@
       "sha256": "feb1f81a477ac1a03ea890b0d60488dbcfafa788d42b171821524cb96db316fe",
       "size_bytes": 1546,
       "snapshot_path": "catalog/sources/ai-stack/contracts/core/external-gate.schema.json"
+    },
+    {
+      "blob_sha": "660a532813ace45993a1e05e949ab4479ac40697",
+      "collection_key": null,
+      "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
+      "path": "contracts/runtime/runtime-execution-request.schema.json",
+      "record_class": null,
+      "ref": "master",
+      "repo": "Ginkgo-Core/ai-stack",
+      "role": "authority",
+      "sha256": "03bcb0b2f4e95424e01035cec1c2ed3fe551e307510792adcd5b119db8871247",
+      "size_bytes": 11543,
+      "snapshot_path": "catalog/sources/ai-stack/contracts/runtime/runtime-execution-request.schema.json"
     },
     {
       "blob_sha": "38243f3f524bd23b43506576c3c387747f45eb3e",
@@ -274,6 +313,19 @@
       "sha256": "1b3d9d65b4b972d6e085cb25e6dc1a63706292c3d5f48a087bac28b1cafdaf72",
       "size_bytes": 20717,
       "snapshot_path": "catalog/sources/ginkgo-library/registry/skills.yaml"
+    },
+    {
+      "blob_sha": "ff0392e37f604bb3e75f3bafac8deb77d7f0b46f",
+      "collection_key": null,
+      "commit_sha": null,
+      "path": "slice/rk-reference-echo.descriptor.yaml",
+      "record_class": "skill_descriptor",
+      "ref": "HEAD",
+      "repo": "Ginkgo-Core/ginkgo-runtime",
+      "role": "kernel",
+      "sha256": "489f3bbbb9a09d5a433dc448676181aa7e1ad43925f6595d1163ab82e9aa057a",
+      "size_bytes": 2154,
+      "snapshot_path": "slice/rk-reference-echo.descriptor.yaml"
     }
   ]
 }

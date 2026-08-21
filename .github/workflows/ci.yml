@@ -57,6 +57,9 @@ jobs:
           import ginkgo_runtime.bus             # noqa: F401  RK-01
           import ginkgo_runtime.router          # noqa: F401  RK-02
           import ginkgo_runtime.gate            # noqa: F401  RK-04
+          import ginkgo_runtime.executor        # noqa: F401  RK-08A + RK-09
+          import ginkgo_runtime.evidence        # noqa: F401  RK-06
+          import ginkgo_runtime.slice           # noqa: F401  RK-10
           print("kernel imports with stdlib + PyYAML only")
           PY
 
@@ -99,6 +102,12 @@ jobs:
                 % (bus.contracts.supported_contract_version,
                    bus.contracts.capability_name_pattern))
           PY
+
+      - name: Reference slice E2E
+        run: PYTHONPATH=src python -m ginkgo_runtime.slice run
+
+      - name: Committed E2E certificate must match a fresh run
+        run: PYTHONPATH=src python -m ginkgo_runtime.slice emit --check
 
       - name: Migration backlog
         if: always()
