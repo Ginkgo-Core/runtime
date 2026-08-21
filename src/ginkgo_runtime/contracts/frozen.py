@@ -8,6 +8,8 @@ Everything the Capability Bus validates against is read out of the pinned
 * ``Error v1`` -- ``contracts/core/error.schema.json``
 * ``RuntimeExecutionResult v1`` --
   ``contracts/runtime/runtime-execution-result.schema.json``
+* ``RuntimeRouteDecision v1`` --
+  ``contracts/runtime/runtime-route-decision.schema.json``
 * the executor-state to result-status mapping -- the same schema's
   ``x-ginkgo-status-mapping``
 
@@ -35,6 +37,7 @@ __all__ = [
     "CAPABILITY_RESULT",
     "ERROR",
     "RUNTIME_EXECUTION_RESULT",
+    "RUNTIME_ROUTE_DECISION",
     "ContractsUnavailableError",
     "FrozenContracts",
     "load_frozen_contracts",
@@ -44,6 +47,7 @@ CAPABILITY_REQUEST = "contracts/core/capability-request.schema.json"
 CAPABILITY_RESULT = "contracts/core/capability-result.schema.json"
 ERROR = "contracts/core/error.schema.json"
 RUNTIME_EXECUTION_RESULT = "contracts/runtime/runtime-execution-result.schema.json"
+RUNTIME_ROUTE_DECISION = "contracts/runtime/runtime-route-decision.schema.json"
 
 STATUS_MAPPING_KEY = "x-ginkgo-status-mapping"
 
@@ -92,7 +96,17 @@ class FrozenContracts:
     capability_result: Validator
     error: Validator
     runtime_execution_result: Validator
+    runtime_route_decision: Validator
     status_mapping: StatusMapping
+    #: ``x-ginkgo-forbidden-fields`` from the route-decision contract: the field
+    #: names that must never appear on a decision. ``ranked_fallbacks`` and
+    #: ``executor_ref`` are the two the fallback freeze and invariant 4 exist to
+    #: keep out. Read from the schema, not restated.
+    route_decision_forbidden_fields: tuple[str, ...]
+    #: ``routing_reason`` ``maxLength`` from the route-decision contract. Read,
+    #: not written: a router that discovered the limit by emitting an oversized
+    #: reason would fail its own artifact instead of explaining itself.
+    routing_reason_max_length: int
     #: ``capability.name`` pattern, read from the frozen request schema and never
     #: written as a literal (``capability-runtime-kernel-v1.md`` section 5).
     capability_name_pattern: str
@@ -126,7 +140,13 @@ def load_frozen_contracts(read_source: Callable[[str], bytes]) -> FrozenContract
     here touches the network or an unpinned file.
     """
     schemas: dict[str, Any] = {}
-    for path in (CAPABILITY_REQUEST, CAPABILITY_RESULT, ERROR, RUNTIME_EXECUTION_RESULT):
+    for path in (
+        CAPABILITY_REQUEST,
+        CAPABILITY_RESULT,
+        ERROR,
+        RUNTIME_EXECUTION_RESULT,
+        RUNTIME_ROUTE_DECISION,
+    ):
         try:
             schemas[path] = json.loads(read_source(path).decode("utf-8"))
         except Exception as exc:
@@ -169,7 +189,24 @@ def load_frozen_contracts(read_source: Callable[[str], bytes]) -> FrozenContract
         capability_result=Validator(schemas[CAPABILITY_RESULT], resolver),
         error=Validator(schemas[ERROR], resolver),
         runtime_execution_result=Validator(schemas[RUNTIME_EXECUTION_RESULT], resolver),
+        runtime_route_decision=Validator(schemas[RUNTIME_ROUTE_DECISION], resolver),
         status_mapping=StatusMapping(by_state=by_state),
+        routing_reason_max_length=int(
+            _dig(
+                schemas[RUNTIME_ROUTE_DECISION],
+                ("properties", "routing_reason", "maxLength"),
+                RUNTIME_ROUTE_DECISION,
+            )
+        ),
+        route_decision_forbidden_fields=tuple(
+            sorted(
+                _dig(
+                    schemas[RUNTIME_ROUTE_DECISION],
+                    ("x-ginkgo-forbidden-fields",),
+                    RUNTIME_ROUTE_DECISION,
+                )
+            )
+        ),
         capability_name_pattern=_dig(
             schemas[CAPABILITY_REQUEST],
             ("properties", "capability", "properties", "name", "pattern"),

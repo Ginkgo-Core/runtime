@@ -22,14 +22,35 @@ import hashlib
 import json
 from typing import Any
 
-__all__ = ["CanonicalisationError", "canonical_json", "hash_canonical", "sha256_hex"]
+__all__ = [
+    "MAX_DEPTH",
+    "CanonicalisationError",
+    "canonical_json",
+    "fingerprint",
+    "hash_canonical",
+    "sha256_hex",
+]
+
+#: Deepest nesting either encoder will walk.
+#:
+#: Both recurse, so an unbounded document raises ``RecursionError`` -- an untyped
+#: crash out of whatever component happened to be holding it. The bound turns
+#: that into a typed refusal a caller can act on. It sits far past anything the
+#: frozen contracts nest, and RK-01 rejects a request deeper than this long
+#: before it reaches here; this is the backstop for every other entry point.
+MAX_DEPTH = 64
 
 
 class CanonicalisationError(TypeError):
     """A value cannot be canonicalised deterministically."""
 
 
-def _check(value: Any, path: str) -> None:
+def _check(value: Any, path: str, depth: int = 0) -> None:
+    if depth > MAX_DEPTH:
+        raise CanonicalisationError(
+            "nesting at %s exceeds %d levels; refused rather than overflowing the "
+            "stack" % (path, MAX_DEPTH)
+        )
     if value is None or isinstance(value, str | bool):
         return
     if isinstance(value, int):          # bool is a subclass of int; handled above
@@ -42,11 +63,11 @@ def _check(value: Any, path: str) -> None:
         for key, item in value.items():
             if not isinstance(key, str):
                 raise CanonicalisationError("non-string key at %s: %r" % (path, key))
-            _check(item, "%s.%s" % (path, key))
+            _check(item, "%s.%s" % (path, key), depth + 1)
         return
     if isinstance(value, list | tuple):
         for index, item in enumerate(value):
-            _check(item, "%s[%d]" % (path, index))
+            _check(item, "%s[%d]" % (path, index), depth + 1)
         return
     raise CanonicalisationError(
         "unsupported type %s at %s" % (type(value).__name__, path)
@@ -101,11 +122,16 @@ def hash_canonical(value: Any) -> str:
 _TAGS = {type(None): "z", bool: "b", int: "i", float: "f", str: "s"}
 
 
-def _tagged(value: Any) -> Any:
+def _tagged(value: Any, depth: int = 0) -> Any:
+    if depth > MAX_DEPTH:
+        raise CanonicalisationError(
+            "nesting exceeds %d levels; refused rather than overflowing the stack"
+            % MAX_DEPTH
+        )
     if isinstance(value, dict):
-        return ["o", sorted((str(k), _tagged(v)) for k, v in value.items())]
+        return ["o", sorted((str(k), _tagged(v, depth + 1)) for k, v in value.items())]
     if isinstance(value, list | tuple):
-        return ["a", [_tagged(item) for item in value]]
+        return ["a", [_tagged(item, depth + 1) for item in value]]
     tag = _TAGS.get(type(value))
     if tag is None:
         raise CanonicalisationError(

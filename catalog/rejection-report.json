@@ -1,7 +1,7 @@
 {
   "algorithm_version": "ginkgo.runtime-catalog.v1",
-  "catalog_hash": "9a82a824183638c3731d66a5e1b6773eac73102f7734ae99c8d86645bdb4dfc2",
-  "catalog_version": "rkc1-9a82a824183638c3",
+  "catalog_hash": "1ac7e9d1465729058ba6b4a5ffcd2c22b7a8bab6f0d85791ca2a6564eceabd88",
+  "catalog_version": "rkc1-1ac7e9d146572905",
   "pinned_sources": [
     {
       "commit_sha": "b74ee58a8d9b5d86161ea42a4408d17cf2bc0d27",
@@ -229,6 +229,14 @@
     },
     {
       "reasons": [
+        {
+          "code": "NULL_IDENTITY_WITHOUT_REASON",
+          "detail": "adapter_id is declared null but adapter_not_applicable_reason is absent or shorter than 8 characters; an unexplained absence cannot be projected as an honest null"
+        },
+        {
+          "code": "NULL_IDENTITY_WITHOUT_REASON",
+          "detail": "provider is declared null but provider_not_applicable_reason is absent or shorter than 8 characters; an unexplained absence cannot be projected as an honest null"
+        },
         {
           "code": "TAXONOMY_IDENTIFIER_COLLISION",
           "detail": "identifier 'commerce.product.evaluate' is used for ['capability', 'skill_id'] at once; CAPABILITY != SKILL != BINDING != TOOL != ADAPTER != PROVIDER"
@@ -721,6 +729,7 @@
       "LEGACY_APPROVAL_FIELD_NOT_ACCEPTED": 14,
       "MISSING_CAPABILITY": 1,
       "MISSING_KIND": 17,
+      "NULL_IDENTITY_WITHOUT_REASON": 2,
       "TAXONOMY_IDENTIFIER_COLLISION": 2
     },
     "rejected_by_source_repo": {

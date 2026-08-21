@@ -225,8 +225,8 @@
       "source_ref": "Ginkgo-Core/ginkgo-library@a9943567458f94a4737c2b08bd441e9aff01071f:registry/capabilities.yaml"
     }
   ],
-  "catalog_hash": "9a82a824183638c3731d66a5e1b6773eac73102f7734ae99c8d86645bdb4dfc2",
-  "catalog_version": "rkc1-9a82a824183638c3",
+  "catalog_hash": "1ac7e9d1465729058ba6b4a5ffcd2c22b7a8bab6f0d85791ca2a6564eceabd88",
+  "catalog_version": "rkc1-1ac7e9d146572905",
   "pinned_sources": [
     {
       "blob_sha": "a161b1ed843decca2512288e730c3890b6797ecc",
@@ -544,6 +544,14 @@
     },
     {
       "reasons": [
+        {
+          "code": "NULL_IDENTITY_WITHOUT_REASON",
+          "detail": "adapter_id is declared null but adapter_not_applicable_reason is absent or shorter than 8 characters; an unexplained absence cannot be projected as an honest null"
+        },
+        {
+          "code": "NULL_IDENTITY_WITHOUT_REASON",
+          "detail": "provider is declared null but provider_not_applicable_reason is absent or shorter than 8 characters; an unexplained absence cannot be projected as an honest null"
+        },
         {
           "code": "TAXONOMY_IDENTIFIER_COLLISION",
           "detail": "identifier 'commerce.product.evaluate' is used for ['capability', 'skill_id'] at once; CAPABILITY != SKILL != BINDING != TOOL != ADAPTER != PROVIDER"
@@ -1042,9 +1050,11 @@
       "fallback_policy": "none",
       "implementation_binding": {
         "adapter_id": "amazon-spapi",
+        "adapter_not_applicable_reason": null,
         "binding_id": null,
         "caller_visible": false,
         "provider": "amazon-selling-partner",
+        "provider_not_applicable_reason": null,
         "skill_id": "amazon-spapi.catalog.search",
         "skill_version": "0.1.0",
         "tool_id": null
@@ -1065,6 +1075,7 @@
         "production_eligible": false,
         "routing_eligible": false
       },
+      "side_effect_class": null,
       "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.amazon.catalog.search.yaml"
     },
     {
@@ -1085,9 +1096,11 @@
       "fallback_policy": "none",
       "implementation_binding": {
         "adapter_id": "amazon-spapi",
+        "adapter_not_applicable_reason": null,
         "binding_id": null,
         "caller_visible": false,
         "provider": "amazon-selling-partner",
+        "provider_not_applicable_reason": null,
         "skill_id": "amazon-spapi.inventory.read",
         "skill_version": "0.1.0",
         "tool_id": null
@@ -1108,6 +1121,7 @@
         "production_eligible": false,
         "routing_eligible": false
       },
+      "side_effect_class": null,
       "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.amazon.inventory.read.yaml"
     },
     {
@@ -1128,9 +1142,11 @@
       "fallback_policy": "none",
       "implementation_binding": {
         "adapter_id": "amazon-spapi",
+        "adapter_not_applicable_reason": null,
         "binding_id": null,
         "caller_visible": false,
         "provider": "amazon-selling-partner",
+        "provider_not_applicable_reason": null,
         "skill_id": "amazon-spapi.orders.read",
         "skill_version": "0.1.0",
         "tool_id": null
@@ -1151,6 +1167,7 @@
         "production_eligible": false,
         "routing_eligible": false
       },
+      "side_effect_class": null,
       "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.amazon.orders.read.yaml"
     },
     {
@@ -1171,9 +1188,11 @@
       "fallback_policy": "none",
       "implementation_binding": {
         "adapter_id": "amazon-spapi",
+        "adapter_not_applicable_reason": null,
         "binding_id": null,
         "caller_visible": false,
         "provider": "amazon-selling-partner",
+        "provider_not_applicable_reason": null,
         "skill_id": "amazon-spapi.pricing.read",
         "skill_version": "0.1.0",
         "tool_id": null
@@ -1194,6 +1213,7 @@
         "production_eligible": false,
         "routing_eligible": false
       },
+      "side_effect_class": null,
       "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.amazon.pricing.read.yaml"
     },
     {
@@ -1215,9 +1235,11 @@
       "fallback_policy": "none",
       "implementation_binding": {
         "adapter_id": "shopee-open-api",
+        "adapter_not_applicable_reason": null,
         "binding_id": null,
         "caller_visible": false,
         "provider": "shopee-open-platform",
+        "provider_not_applicable_reason": null,
         "skill_id": "shopee-open-api.catalog.read",
         "skill_version": "0.1.0",
         "tool_id": null
@@ -1238,6 +1260,7 @@
         "production_eligible": false,
         "routing_eligible": false
       },
+      "side_effect_class": null,
       "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.shopee.catalog.read.yaml"
     },
     {
@@ -1259,9 +1282,11 @@
       "fallback_policy": "none",
       "implementation_binding": {
         "adapter_id": "shopee-open-api",
+        "adapter_not_applicable_reason": null,
         "binding_id": null,
         "caller_visible": false,
         "provider": "shopee-open-platform",
+        "provider_not_applicable_reason": null,
         "skill_id": "shopee-open-api.orders.read",
         "skill_version": "0.1.0",
         "tool_id": null
@@ -1282,6 +1307,7 @@
         "production_eligible": false,
         "routing_eligible": false
       },
+      "side_effect_class": null,
       "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.shopee.orders.read.yaml"
     },
     {
@@ -1303,9 +1329,11 @@
       "fallback_policy": "none",
       "implementation_binding": {
         "adapter_id": null,
+        "adapter_not_applicable_reason": "no_distinct_adapter_boundary_is_required_or_proven_for_the_local_transform",
         "binding_id": null,
         "caller_visible": false,
         "provider": null,
+        "provider_not_applicable_reason": "local_deterministic_transformation_does_not_call_an_external_provider",
         "skill_id": "shopee.product.normalize",
         "skill_version": "0.1.0",
         "tool_id": "amazon-ops-shopee-normalizer"
@@ -1326,6 +1354,7 @@
         "production_eligible": false,
         "routing_eligible": false
       },
+      "side_effect_class": null,
       "source_ref": "Ginkgo-Core/ginkgo-agents@89247220ffa15238cff209dba13088eae1a1a641:features/commerce.shopee.product.normalize.yaml"
     }
   ]

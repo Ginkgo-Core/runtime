@@ -55,6 +55,7 @@ jobs:
           sys.path.insert(0, "src")
           import ginkgo_runtime.catalog.build   # noqa: F401  RK-07
           import ginkgo_runtime.bus             # noqa: F401  RK-01
+          import ginkgo_runtime.router          # noqa: F401  RK-02
           print("kernel imports with stdlib + PyYAML only")
           PY
 
