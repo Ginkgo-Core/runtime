@@ -2,9 +2,10 @@
 
 **Implementation of the Ginkgo Capability Runtime Kernel.**
 
-> Status: **EMPTY — no implementation exists yet.** This repository was designated as the kernel
-> implementation host on 2026-08-20 (BLK-16). No code has been written, and none may be added
-> without the architecture in `Ginkgo-Core/ai-stack` being merged first.
+> Status: **RK-07 Runtime Catalog implemented.** This repository was designated as the kernel
+> implementation host on 2026-08-20 (BLK-16). The architecture it implements merged first:
+> `ai-stack#45` (Capability Runtime Kernel v1) and `ai-stack#47` (static P0 conformance).
+> Nothing else in the kernel exists yet.
 
 Renamed from `ginkgo-infra`, which was an unused scaffold. History, MIT licence and private
 visibility are unchanged.
@@ -21,11 +22,41 @@ Architecture and contracts are **not** owned here.
 | `Ginkgo-Core/ginkgo-library` | Arsenal · Registry · provenance |
 | `Ginkgo-Seeds/ginkgo-connect` | concrete adapters and connectors |
 
+## Implemented
+
+| Component | Status | Where |
+|---|---|---|
+| **RK-07 Runtime Catalog** | **implemented** | [`catalog/`](catalog/README.md) · [`src/ginkgo_runtime/catalog/`](src/ginkgo_runtime/catalog) |
+| RK-10 runtime conformance | not started | `ai-stack#38` |
+| RK-01 Capability Bus | not started | `ai-stack#39` |
+| RK-02 Domain Router | not started | `ai-stack#40` |
+| RK-04 Policy + Lifecycle Gate | not started | `ai-stack#41` |
+| RK-08A Executor Contract | not started | `ai-stack#32` |
+| RK-09 `system.echo.execute` | not started | `ai-stack#42` |
+| RK-06 Evidence / Audit Writer | not started | `ai-stack#43` |
+
+### Quick start
+
+```bash
+pip install -r requirements-dev.txt
+PYTHONPATH=src python -m ginkgo_runtime.catalog build
+PYTHONPATH=src python -m ginkgo_runtime.catalog reject     # the migration backlog
+python -m pytest tests -q
+```
+
+The catalog builds offline from sources pinned by commit SHA. It opens no socket, reads no
+credential and writes to no upstream registry.
+
+### Stack
+
+Python ≥ 3.11, standard library plus **PyYAML** — one runtime dependency, no framework, no build
+step. Rationale and the options rejected: [`ADR-RT-001`](docs/adr/ADR-RT-001-implementation-stack.md).
+
 ## Will contain
 
 Capability Bus runtime · Domain Router runtime · skill/binding resolution · policy and lifecycle
-admission · Runtime Catalog consumer · normalized execution boundary · Evidence runtime · executor
-interfaces · conformance implementation.
+admission · normalized execution boundary · Evidence runtime · executor interfaces · conformance
+implementation.
 
 ## Must never contain
 
@@ -60,7 +91,9 @@ Everything authoritative lives in `Ginkgo-Core/ai-stack`:
 - `architecture/runtime/channel-boundary.md` — `CHANNEL != AGENT != EXECUTOR != CAPABILITY != KNOWLEDGE`
 - `docs/adr/ADR-005-capability-runtime-kernel-boundary.md`
 
-Tracking: `Ginkgo-Core/ai-stack#35` (EPIC) · `Ginkgo-Core/ai-stack#45` (architecture PR).
+Tracking: `Ginkgo-Core/ai-stack#35` (EPIC) · `Ginkgo-Core/ai-stack#37` (RK-07) ·
+`Ginkgo-Core/ai-stack#45` (architecture, merged `1a580965`) ·
+`Ginkgo-Core/ai-stack#47` (static P0 conformance, merged `b74ee58a`).
 
 ## Licence
 

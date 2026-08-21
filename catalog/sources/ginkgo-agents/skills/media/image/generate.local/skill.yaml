@@ -1,0 +1,84 @@
+# Skill manifest oficial — formato do SKILL_ATLAS.md §11
+id: media.image.generate.local
+version: 1.0.0
+level: L1
+maturity: S2          # INTEGRATED — integrada ao ecossistema agentic (Sylvia→n8n→Pyre→runtime)
+autonomy_level: A2    # Workflow Operator: dispara workflow validado
+skill_level: L1
+
+purpose: >
+  Gerar uma imagem local reproduzível através da infraestrutura criativa Ginkgo,
+  quando privacidade, reprodutibilidade ou custo marginal zero dominam.
+
+capability: creative.image.local
+
+use_when:
+  - privacy_required
+  - reproducible_workflow_required
+  - local_execution_preferred
+  - marginal_cost_zero_required
+
+avoid_when:
+  - local_gpu_unavailable
+  - system_ram_below_2gib_free
+  - interactive_latency_required_and_runtime_cold   # cold ≈ 61-85s; warm ≈ 10s
+
+inputs:
+  required:
+    - request_id
+    - prompt
+  optional:
+    - negative_prompt
+    - width      # 256-1024, múltiplo de 8
+    - height     # 256-1024, múltiplo de 8
+    - seed
+    - preset     # default: sdxl-local-standard (768x768)
+
+outputs:
+  contract: creative-asset   # CreativeGenerationResult normalizado do Pyre
+
+executor:
+  type: n8n
+  workflow: creative-image-local-v1        # ai-stack/workflows/_MediaGen
+  router: pyre                             # POST /v1/creative/jobs
+  runtime: comfyui-local                   # ai-stack profile creative, on-demand
+
+preferred_tools: [comfyui-local]
+fallbacks:
+  policy: explicit        # ZERO fallback silencioso (invariante Waves 7-10)
+  order: []               # capability local é obrigatória — sem fallback cloud
+
+permissions:
+  network: internal
+  filesystem_write: assets_only            # C:\AI\30-Assets
+  shell: false                             # lifecycle usa somente scripts allowlisted internos
+  external_side_effects: false
+
+execution_mode: autonomous
+
+cost_policy:
+  billing_usd: 0
+  compute_cost_estimate: null              # não declarado zero — explícito como não calculado
+  resource_policy:
+    local_gpu_concurrency: 1
+    ram_gate_gib: 2.0
+    memory_pressure_floor_gib: 1.5
+    idle_ttl_seconds: 300
+
+validation:
+  e2e: true
+  evals: evals/validation.yaml
+
+evidence:
+  - wave7: provider-neutral router E2E (Ginkgo-Seeds/ginkgo-pyre#3)
+  - wave8: n8n -> Pyre -> ComfyUI E2E (Ginkgo-Core/ai-stack#12)
+  - wave9: persistence + idempotency + lifecycle + restart recovery (Ginkgo-Seeds/ginkgo-pyre#4)
+
+owner: pyre
+runtime_dependencies:
+  - ai-stack/comfyui (profile creative, ComfyUI v0.29.2 pinado)
+  - pyre backend (/v1/creative)
+  - postgres (pyre.creative_jobs)
+  - sd_xl_base_1.0.safetensors (sha256 31e35c80fc48..., registry em 30-Assets)
+
+status: skill

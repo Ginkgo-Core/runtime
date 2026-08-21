@@ -1,0 +1,6 @@
+-r requirements.txt
+
+# Test runner and linter, pinned exactly. Neither is imported by the kernel; the
+# CI step "Assert the kernel needs nothing else" proves that rather than assuming it.
+pytest==8.3.4
+ruff==0.9.4

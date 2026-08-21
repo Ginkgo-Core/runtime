@@ -1,0 +1,154 @@
+# Provider Binding Contract — shopee-open-api.catalog.read
+id: shopee-open-api.catalog.read
+legacy_aliases:
+  - id: commerce.shopee.catalog.read
+    deprecated: true
+    replacement: shopee-open-api.catalog.read
+version: 0.1.0
+kind: provider_binding
+lifecycle_status: FEATURE
+maturity: F1
+phase: PRE_APPROVAL
+level: L1
+autonomy_level: A1
+status: feature
+
+purpose: >
+  Implement the provider-agnostic commerce.catalog.read capability through a
+  Shopee Open API binding while preserving the P0 pre-approval freeze.
+
+capability:
+  name: commerce.catalog.read
+  contract_version: v1
+
+caller_contract:
+  request: CapabilityRequest v1
+  request_schema_ref: Ginkgo-Core/ai-stack/contracts/core/capability-request.schema.json
+  result: CapabilityResult v1
+  result_schema_ref: Ginkgo-Core/ai-stack/contracts/core/capability-result.schema.json
+  caller_selects: [capability.name, capability.contract_version]
+  domain_router_resolves: [skill_id, skill_version, adapter, provider]
+
+implementation_binding:
+  skill_id: shopee-open-api.catalog.read
+  skill_version: 0.1.0
+  adapter_id: shopee-open-api
+  provider: shopee-open-platform
+  internal_routing_metadata: true
+
+use_when:
+  - offline_contract_or_fixture_validation
+  - authorized_shop_catalog_read_after_external_gate
+  - normalized_shopee_product_data_required
+
+avoid_when:
+  - third_party_catalog_discovery_required
+  - any_write_or_publish_operation
+  - live_execution_before_shopee_business_approval
+  - live_execution_before_first_governed_read_validation
+
+inputs:
+  required:
+    - shop_ref
+    - query
+  optional:
+    - query.item_ids
+    - query.offset
+    - query.page_size
+    - query.include
+    - query.language
+  forbidden:
+    - skill_id
+    - skill_version
+    - provider
+    - adapter
+    - endpoint
+    - credential
+    - secret
+    - partner_key
+    - access_token
+    - refresh_token
+    - mutation
+
+outputs:
+  contract: CapabilityResult v1
+  data_contract: shopee-catalog-result.v1
+  fields:
+    - products
+    - item_id
+    - title
+    - description
+    - category_id
+    - media
+    - price
+    - stock
+    - variants
+    - attributes
+    - status
+    - provenance
+
+permissions:
+  external_network: true
+  marketplace_read: [shopee.catalog]
+  marketplace_write: []
+  pii: none
+  filesystem_write: audit_only
+  shell: false
+  secrets:
+    caller_access: forbidden
+    adapter_managed_refs: [SHOPEE_PARTNER_ID, SHOPEE_PARTNER_KEY, SHOPEE_SHOP_ID, SHOPEE_ACCESS_TOKEN, SHOPEE_REFRESH_TOKEN]
+
+approval:
+  required: false
+  status: NOT_REQUIRED
+
+external_gates:
+  - id: shopee_business_approval
+    gate_type: marketplace_business_approval
+    status: UNKNOWN
+    source_ref: Scale-Characters/amazon-ops#2@bccfc0f5142f432f889158870c8f9e26e353fa65
+
+execution_mode: autonomous
+routing:
+  routing_eligible: false
+  live_execution: blocked
+  reason: shopee_business_approval_not_clear_and_live_validation_missing
+  approval_cannot_override_external_gate: true
+
+fallback_policy: none
+
+validation:
+  canonical_evidence:
+    source: Scale-Characters/amazon-ops#2
+    head: bccfc0f5142f432f889158870c8f9e26e353fa65
+    github_actions_run: 32169677496
+    ruff: PASS
+    shopee_offline: 28_passed
+    general_suite: 104_passed_1_deselected
+    windows_linux_diagnostic: 1_expected_failure_non_blocking
+    credentials_in_ci: none
+    mutations: OFF
+    live_shopee: OFF
+    live_provider_validation_proven: false
+  evidence:
+    - "amazon-ops#2 implements Shopee catalog read adapters and product normalization"
+    - "amazon-ops#2 GitHub Actions validates 28 Shopee tests offline on the pinned head"
+    - "amazon-ops#2 explicitly keeps live Shopee disabled and mutations OFF"
+  blockers:
+    - shopee_business_approval_not_clear
+    - no_read_only_live_e2e
+    - real_payload_contract_not_yet_compared_with_live_fixture
+
+promotion:
+  allowed: false
+  lifecycle_ceiling: FEATURE
+  phase_ceiling: PRE_APPROVAL
+  requires:
+    - shopee_business_approval_gate_CLEAR
+    - governed_secret_configuration_outside_git
+    - one_read_only_live_request
+    - real_payload_vs_fixture_contract_review
+    - sanitized_evidence_registered_in_github
+    - reviewer_approval
+
+owner_domain: commerce

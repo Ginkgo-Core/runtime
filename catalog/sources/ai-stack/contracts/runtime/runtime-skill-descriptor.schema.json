@@ -1,0 +1,794 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Ginkgo-Core/ai-stack/contracts/runtime/runtime-skill-descriptor.schema.json",
+  "title": "Ginkgo RuntimeSkillDescriptor v1",
+  "description": "INTERNAL runtime record. This is not a caller contract and never extends CapabilityRequest v1. It is the authoring shape that the Runtime Catalog (RK-07) admits and that the Domain Router (RK-02) and Policy + Lifecycle Gate (RK-04) read. Skill and binding are ONE record discriminated by `kind`; there is no separate binding descriptor. Derived from the descriptor shape merged in Ginkgo-Core/ginkgo-agents#9 plus the lifecycle/routing guards in Ginkgo-Core/ai-stack#22.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "version",
+    "lifecycle_status",
+    "capability",
+    "caller_contract",
+    "implementation_binding",
+    "fallback_policy",
+    "approval",
+    "external_gates",
+    "permissions",
+    "side_effect_class",
+    "routing"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "ginkgo.runtime-skill-descriptor.v1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 160,
+      "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$",
+      "description": "Internal skill or binding identifier. Records are resolved by this field and NEVER by filename; three filename conventions are currently in use across the ecosystem."
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "deterministic_domain_skill",
+        "implementation_binding",
+        "provider_binding",
+        "internal_agent_workflow_candidate"
+      ],
+      "description": "The taxonomy discriminator that keeps CAPABILITY != SKILL != BINDING true without a second schema. `internal_agent_workflow_candidate` requires capability: null - it is not reachable through the Capability Bus."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "lifecycle_status": {
+      "type": "string",
+      "enum": [
+        "FEATURE",
+        "PROTOTYPE",
+        "VALIDATED",
+        "INTEGRATED",
+        "PRODUCTION",
+        "DEPRECATED",
+        "REJECTED"
+      ],
+      "description": "The ONLY lifecycle field the runtime reads. `maturity`, `level`, `autonomy_level`, `phase` and `status` are advisory compatibility metadata. A record without this field is admitted at FEATURE, never at its legacy maturity code."
+    },
+    "maturity": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Advisory legacy maturity code (F0/F1/F2/F3/S1/S2/S3, SIMULATION/SHADOW/PRODUCTION, EXPERIMENTAL, ...). Never authoritative."
+    },
+    "capability": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "contract_version"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 3,
+              "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*){2,}$",
+              "description": "Provider-agnostic public capability name. MINIMUM THREE dot-separated segments - identical to the frozen CapabilityRequest v1 pattern. Implementations MUST load this pattern from contracts/core/capability-request.schema.json at runtime rather than duplicating it."
+            },
+            "contract_version": {
+              "type": "string",
+              "pattern": "^v[0-9]+$"
+            }
+          }
+        },
+        {
+          "type": "null",
+          "description": "Only valid when kind is internal_agent_workflow_candidate. The record is not reachable through the Capability Bus."
+        }
+      ]
+    },
+    "caller_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request",
+        "request_schema_ref",
+        "result",
+        "result_schema_ref",
+        "caller_selects",
+        "domain_router_resolves"
+      ],
+      "properties": {
+        "request": {
+          "const": "CapabilityRequest v1"
+        },
+        "request_schema_ref": {
+          "const": "contracts/core/capability-request.schema.json"
+        },
+        "result": {
+          "const": "CapabilityResult v1"
+        },
+        "result_schema_ref": {
+          "const": "contracts/core/capability-result.schema.json"
+        },
+        "caller_selects": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "capability",
+              "input",
+              "constraints",
+              "governance",
+              "evidence",
+              "idempotency_key"
+            ]
+          },
+          "description": "Machine-readable form of invariant 17. No implementation identifier may appear here."
+        },
+        "domain_router_resolves": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "skill_id",
+              "skill_version",
+              "binding_id",
+              "adapter_id",
+              "provider",
+              "tool_id"
+            ]
+          }
+        }
+      }
+    },
+    "implementation_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "skill_id",
+        "skill_version"
+      ],
+      "properties": {
+        "skill_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "skill_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "binding_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "adapter_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "adapter_not_applicable_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1024,
+          "description": "REQUIRED when adapter_id is null. Do not invent an adapter identity to fill the generic path; record honestly why no integration boundary exists."
+        },
+        "provider": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "provider_not_applicable_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1024
+        },
+        "tool_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "caller_visible": {
+          "const": false,
+          "description": "Implementation identity is never caller-visible. Present as an explicit assertion, not as a switch."
+        }
+      }
+    },
+    "fallback_policy": {
+      "type": "string",
+      "enum": [
+        "none",
+        "same_semantics_only"
+      ],
+      "default": "none",
+      "description": "Frozen enum. `explicit` and any legacy `fallbacks: [candidate, ...]` list are non-conformant and cause exclusion from the Runtime Catalog. The policy authorizes a MODE and never names a candidate."
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "policy_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "description": "DECLARATION only. Approval STATE lives in PostgreSQL against contracts/core/approval.schema.json. The legacy field human_approval (including the value `supervised`) is not accepted."
+    },
+    "external_gates": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "gate_id",
+          "gate_type"
+        ],
+        "properties": {
+          "gate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "gate_type": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.-]+$"
+          },
+          "authority": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        }
+      },
+      "description": "DECLARATION only; gate STATE lives in PostgreSQL against contracts/core/external-gate.schema.json. An internal lifecycle fact (for example `adapter not validated`) is NOT an External Gate - use lifecycle_status."
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "network",
+        "filesystem_write",
+        "shell",
+        "external_side_effects",
+        "secrets"
+      ],
+      "properties": {
+        "network": {
+          "type": "string",
+          "enum": [
+            "none",
+            "read_only",
+            "governed"
+          ]
+        },
+        "filesystem_write": {
+          "type": "boolean"
+        },
+        "shell": {
+          "type": "boolean"
+        },
+        "external_side_effects": {
+          "type": "boolean"
+        },
+        "secrets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "caller_access"
+          ],
+          "properties": {
+            "caller_access": {
+              "const": "forbidden"
+            },
+            "adapter_managed_refs": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Credential IDENTIFIERS only. A secret value in this array is a contract violation."
+            }
+          }
+        }
+      }
+    },
+    "side_effect_class": {
+      "type": "string",
+      "enum": [
+        "read",
+        "local_transform",
+        "local_analysis",
+        "generate_only",
+        "plan_only",
+        "read_generate",
+        "governed_write",
+        "governed_external_write",
+        "policy_dependent"
+      ],
+      "description": "Kernel-wide side-effect vocabulary. Domain-specific ladders (for example the browser operation ladder) are refinements that MUST map onto this enum rather than replace it. Approval policy follows the operation class, not the location the operation runs in."
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "discoverable",
+        "routing_eligible",
+        "production_eligible"
+      ],
+      "properties": {
+        "discoverable": {
+          "type": "boolean"
+        },
+        "routing_eligible": {
+          "type": "boolean"
+        },
+        "production_eligible": {
+          "type": "boolean"
+        }
+      },
+      "description": "DISCOVERABLE != ROUTING_ELIGIBLE != PRODUCTION_ELIGIBLE. Collapsing these into one boolean is the most common lifecycle defect in the current registries."
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eval_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "validation_evidence_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "tested_commit": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      }
+    },
+    "legacy_aliases": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Deprecated identifiers retained for migration diagnostics only. An alias is never routing authority."
+    },
+    "owner": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Repository and path this record was projected from, for Runtime Catalog provenance."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "lifecycle_status": {
+            "const": "FEATURE"
+          }
+        },
+        "required": [
+          "lifecycle_status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "routing": {
+            "properties": {
+              "routing_eligible": {
+                "const": false,
+                "$comment": "Sourced from ai-stack#22 (UNMERGED), not from frozen invariant 16, which reads only 'FEATURE never executes in production'. It bars PRODUCTION routing; a certification route is still permitted via RuntimeRouteDecision.execution_mode = certification."
+              },
+              "production_eligible": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle_status": {
+            "enum": [
+              "PROTOTYPE",
+              "VALIDATED",
+              "INTEGRATED"
+            ]
+          }
+        },
+        "required": [
+          "lifecycle_status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "routing": {
+            "properties": {
+              "production_eligible": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "internal_agent_workflow_candidate"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "capability": {
+            "type": "null"
+          },
+          "routing": {
+            "properties": {
+              "routing_eligible": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "implementation_binding": {
+            "properties": {
+              "adapter_id": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "adapter_id"
+            ]
+          }
+        },
+        "required": [
+          "implementation_binding"
+        ]
+      },
+      "then": {
+        "properties": {
+          "implementation_binding": {
+            "required": [
+              "adapter_not_applicable_reason"
+            ],
+            "properties": {
+              "adapter_not_applicable_reason": {
+                "type": "string",
+                "minLength": 8
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "implementation_binding": {
+            "properties": {
+              "provider": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "provider"
+            ]
+          }
+        },
+        "required": [
+          "implementation_binding"
+        ]
+      },
+      "then": {
+        "properties": {
+          "implementation_binding": {
+            "required": [
+              "provider_not_applicable_reason"
+            ],
+            "properties": {
+              "provider_not_applicable_reason": {
+                "type": "string",
+                "minLength": 8
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "capability": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "capability"
+        ]
+      },
+      "then": {
+        "properties": {
+          "kind": {
+            "const": "internal_agent_workflow_candidate"
+          }
+        }
+      }
+    },
+    {
+      "$comment": "FROZEN invariant 16, enforced DIRECTLY against lifecycle_status rather than only transitively through routing_eligible. An earlier revision guarded FEATURE against routing_eligible but never against production_eligible, so the single frozen lifecycle rule in the whole freeze was the one rule this schema did not check.",
+      "if": {
+        "properties": {
+          "lifecycle_status": {
+            "const": "FEATURE"
+          }
+        },
+        "required": [
+          "lifecycle_status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "routing": {
+            "required": [
+              "production_eligible"
+            ],
+            "properties": {
+              "production_eligible": {
+                "const": false
+              }
+            }
+          }
+        },
+        "required": [
+          "routing"
+        ]
+      }
+    },
+    {
+      "$comment": "INTRODUCED_BY_PR45. Terminal states are neither routable nor production-eligible. See architecture/runtime/lifecycle-and-promotion.md section 3.",
+      "if": {
+        "properties": {
+          "lifecycle_status": {
+            "enum": [
+              "DEPRECATED",
+              "REJECTED"
+            ]
+          }
+        },
+        "required": [
+          "lifecycle_status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "routing": {
+            "required": [
+              "routing_eligible",
+              "production_eligible"
+            ],
+            "properties": {
+              "routing_eligible": {
+                "const": false
+              },
+              "production_eligible": {
+                "const": false
+              }
+            }
+          }
+        },
+        "required": [
+          "routing"
+        ]
+      }
+    },
+    {
+      "$comment": "INTRODUCED_BY_PR45, lifecycle-and-promotion.md section 4 invariants 3 and 4: only PRODUCTION may carry production_eligible, and a record that cannot be routed cannot serve production traffic. The converse does not hold -- VALIDATED and INTEGRATED are routable and not production-eligible.",
+      "if": {
+        "properties": {
+          "routing": {
+            "properties": {
+              "production_eligible": {
+                "const": true
+              }
+            },
+            "required": [
+              "production_eligible"
+            ]
+          }
+        },
+        "required": [
+          "routing"
+        ]
+      },
+      "then": {
+        "properties": {
+          "lifecycle_status": {
+            "const": "PRODUCTION"
+          },
+          "routing": {
+            "required": [
+              "routing_eligible"
+            ],
+            "properties": {
+              "routing_eligible": {
+                "const": true
+              }
+            }
+          }
+        },
+        "required": [
+          "lifecycle_status",
+          "routing"
+        ]
+      }
+    },
+    {
+      "$comment": "INTRODUCED_BY_PR45. The section 3 ceiling for PROTOTYPE. Guard 1 constrains PROTOTYPE/VALIDATED/INTEGRATED on production_eligible only; without this a PROTOTYPE could carry routing_eligible true and serve non_production caller traffic, which section 3 forbids. VALIDATED and INTEGRATED are deliberately excluded here - they ARE routable.",
+      "if": {
+        "properties": {
+          "lifecycle_status": {
+            "const": "PROTOTYPE"
+          }
+        },
+        "required": [
+          "lifecycle_status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "routing": {
+            "required": [
+              "routing_eligible"
+            ],
+            "properties": {
+              "routing_eligible": {
+                "const": false
+              }
+            }
+          }
+        },
+        "required": [
+          "routing"
+        ]
+      }
+    }
+  ],
+  "x-ginkgo-contract-version": "v1",
+  "x-ginkgo-authority": "internal-runtime",
+  "x-ginkgo-authority-status": "INTRODUCED_BY_PR45",
+  "x-ginkgo-authority-note": "This contract becomes authority when ai-stack#45 merges. It is NOT authority in master today. It references contracts/core/* which ARE frozen in master, and it modifies none of them. Lifecycle semantics are normative in architecture/runtime/lifecycle-and-promotion.md section 3.",
+  "x-ginkgo-taxonomy-note": "CAPABILITY != SKILL != BINDING != TOOL != ADAPTER != PROVIDER != EXECUTOR. In the canonical example below the three entities that genuinely exist carry three distinct identities: capability system.echo.execute, skill rk-reference-echo, tool rk-echo-transform. BINDING is not a separate entity here - the kind discriminator folds it - and ADAPTER and PROVIDER are null with an explicit reason because no integration boundary and no provider exist. Setting skill_id equal to capability.name is CAPABILITY == SKILL and is rejected by the RK-10 conformance linter under P0-TAX-001. Identifiers use the rk- prefix because ADR-005 section 6 bars the bare word kernel in identifiers.",
+  "examples": [
+    {
+      "schema_version": "ginkgo.runtime-skill-descriptor.v1",
+      "id": "rk-reference-echo",
+      "kind": "deterministic_domain_skill",
+      "version": "1.0.0",
+      "lifecycle_status": "FEATURE",
+      "capability": {
+        "name": "system.echo.execute",
+        "contract_version": "v1"
+      },
+      "caller_contract": {
+        "request": "CapabilityRequest v1",
+        "request_schema_ref": "contracts/core/capability-request.schema.json",
+        "result": "CapabilityResult v1",
+        "result_schema_ref": "contracts/core/capability-result.schema.json",
+        "caller_selects": [
+          "capability",
+          "input",
+          "constraints",
+          "governance",
+          "evidence",
+          "idempotency_key"
+        ],
+        "domain_router_resolves": [
+          "skill_id",
+          "skill_version",
+          "adapter_id",
+          "provider"
+        ]
+      },
+      "implementation_binding": {
+        "skill_id": "rk-reference-echo",
+        "skill_version": "1.0.0",
+        "adapter_id": null,
+        "adapter_not_applicable_reason": "Deterministic in-process transform. No integration boundary exists, so inventing an adapter identity would misrepresent the implementation.",
+        "provider": null,
+        "provider_not_applicable_reason": "No external or local provider is invoked. The tool is a pure function.",
+        "tool_id": "rk-echo-transform"
+      },
+      "fallback_policy": "none",
+      "approval": {
+        "required": false
+      },
+      "external_gates": [],
+      "permissions": {
+        "network": "none",
+        "filesystem_write": false,
+        "shell": false,
+        "external_side_effects": false,
+        "secrets": {
+          "caller_access": "forbidden",
+          "adapter_managed_refs": []
+        }
+      },
+      "side_effect_class": "local_transform",
+      "routing": {
+        "discoverable": true,
+        "routing_eligible": false,
+        "production_eligible": false
+      }
+    }
+  ],
+  "x-ginkgo-caller-surface": false
+}

@@ -1,0 +1,491 @@
+version: 3
+updated_at: 2026-08-19
+
+# Registry records describe purpose-driven skills and internal implementation bindings.
+# Public capabilities remain provider-agnostic; provider-specific IDs are never public capability IDs.
+
+skills:
+  - id: research.market-deep-scan
+    purpose: Research a market, competitors, pricing, complaints, opportunities and gaps.
+    capability: knowledge.research
+    inputs: [market, geography, questions]
+    outputs: [research_report, sources, findings, opportunities, confidence]
+    preferred_tools: [google-deep-research-ui, google-gemini-api]
+    fallbacks: [research.web-general]
+    permissions:
+      external_network: true
+      write_files: true
+      send_messages: false
+    human_approval: false
+    cost_tier: medium
+
+  - id: research.web-general
+    purpose: Gather current evidence from the public web when a specialist research provider is unavailable.
+    capability: knowledge.research
+    inputs: [question, constraints]
+    outputs: [sources, findings, uncertainty]
+    preferred_tools: []
+    human_approval: false
+    cost_tier: low
+
+  - id: knowledge.ingest-source-set
+    purpose: Convert clippings, papers, docs and transcripts into a governed source set for synthesis and learning.
+    capability: knowledge.notebook
+    inputs: [sources, topic, provenance]
+    outputs: [source_set, synthesis, glossary, open_questions]
+    preferred_tools: [google-notebooklm]
+    human_approval: true
+    promotion_pipeline: 50-data-knowledge/KNOWLEDGE_PROMOTION_PIPELINE.md
+
+  - id: knowledge.promote-pattern
+    purpose: Promote repeated evidence into a reusable pattern, standard or law only after verification.
+    capability: knowledge.notebook
+    inputs: [source_set, synthesis, evidence]
+    outputs: [pattern_candidate, confidence, promotion_target]
+    preferred_tools: [google-notebooklm, google-gemini-api]
+    human_approval: true
+
+  - id: code.repo.inspect
+    purpose: Inspect repository structure, history, issues and implementation context without modifying it.
+    capability: code.repo.inspect
+    inputs: [repository, question]
+    outputs: [repo_map, findings, risks]
+    preferred_tools: [github-api]
+    human_approval: false
+
+  - id: code.issue.create
+    purpose: Turn validated architecture or backlog work into an actionable GitHub issue.
+    capability: code.issue.create
+    inputs: [repository, title, scope, acceptance_criteria]
+    outputs: [issue_reference]
+    preferred_tools: [github-api]
+    human_approval: false
+
+  - id: code.pr.open
+    purpose: Open a pull request from a prepared implementation branch with evidence and acceptance criteria.
+    capability: code.pr.open
+    inputs: [repository, branch, base, summary, validation]
+    outputs: [pull_request_reference]
+    preferred_tools: [github-api]
+    human_approval: false
+
+  - id: code.implement.scoped
+    purpose: Implement a scoped repository change using a coding executor and return diff, tests and evidence.
+    capability: dev.async-coding
+    inputs: [repository, task, constraints, acceptance_criteria]
+    outputs: [branch, diff, tests, evidence]
+    preferred_tools: [claude-code-local, codex-local]
+    human_approval: supervised
+
+  - id: storage.file.archive
+    purpose: Store large documents, media, datasets or selected backups outside Git while returning a durable reference.
+    capability: storage.files
+    inputs: [file, destination_class, metadata]
+    outputs: [durable_file_reference]
+    preferred_tools: [google-drive-connector]
+    human_approval: false
+
+  - id: database.query.read
+    purpose: Read operational application data through a governed database boundary.
+    capability: database.query
+    inputs: [project, query_or_intent]
+    outputs: [normalized_rows, provenance]
+    preferred_tools: [supabase-api]
+    human_approval: false
+
+  - id: media.image.generate.local
+    purpose: Generate a reproducible local image when privacy, control or marginal cost dominate.
+    capability: creative.image.local
+    maturity: S2-INTEGRATED
+    inputs: [prompt, negative_prompt, preset, seed]
+    outputs: [creative_asset, generation_metadata]
+    preferred_tools: [comfyui-local]
+    fallbacks: []
+    use_when: [privacy_required, reproducibility_required, local_gpu_available]
+    avoid_when: [local_gpu_busy, system_ram_below_2gib_free]
+    human_approval: false
+    evidence: [ginkgo-pyre#3, ai-stack#12, ginkgo-pyre#4]
+
+  - id: media.image.generate
+    purpose: Generate an image using the best VALIDATED provider compatible with request constraints; caller never selects provider/tool/model.
+    capability: resolved-by-router
+    maturity: S1-SKILL
+    inputs: [prompt, negative_prompt, constraints, generation, metadata]
+    forbidden_inputs: [provider, tool, model]
+    outputs: [creative_asset]
+    preferred_tools: []
+    fallbacks: []
+    human_approval: false
+    executor: n8n workflow creative-image-generate-v1
+
+  - id: media.image.generate.cloud
+    purpose: Generate a cloud image when speed or provider-specific quality dominates.
+    capability: creative.image.cloud
+    maturity: F2-PROTOTYPE
+    production_eligible: false
+    inputs: [prompt, references, aspect_ratio, quality]
+    outputs: [creative_asset, provider_metadata, cost]
+    preferred_tools: [fal-api]
+    prototyped_tools: [gemini-image]
+    human_approval: false
+
+  - id: media.product-ad.fast
+    purpose: Produce commercial product creatives quickly for ads, social and commerce experiments.
+    capability: creative.video.cloud
+    inputs: [product, offer, channel, references]
+    outputs: [creative_asset, hook, provider_metadata, cost]
+    preferred_tools: [higgsfield-mcp, fal-api]
+    human_approval: false
+
+  - id: amazon-spapi.catalog.search
+    kind: provider_binding
+    legacy_aliases:
+      - id: commerce.amazon.catalog.search
+        deprecated: true
+        replacement: amazon-spapi.catalog.search
+        public_capability: false
+    purpose: Search the Amazon catalog through a governed read-only binding without exposing SP-API internals to callers.
+    capability: commerce.catalog.search
+    lifecycle_status: FEATURE
+    lifecycle_ceiling: FEATURE
+    maturity: F1
+    level: L1
+    autonomy_level: A1
+    inputs: [marketplace_ref, criteria, pagination]
+    forbidden_inputs: [skill_id, skill_version, provider, adapter, endpoint, credential, access_token, refresh_token]
+    outputs: [items, identifiers, title, brand, category, attributes, images, pagination, provenance]
+    permissions:
+      external_network: true
+      marketplace_read: [amazon.catalog]
+      marketplace_write: []
+      pii: none
+    approval_required: false
+    preferred_tools: [amazon-sp-api]
+    preferred_providers: [amazon-selling-partner]
+    fallback_policy: none
+    use_when: [amazon_catalog_discovery_required, asin_resolution_required]
+    avoid_when: [inventory_required, pricing_required, orders_required, live_before_validation]
+    routing_eligible: false
+    live_execution: blocked
+    production_eligible: false
+    evidence:
+      source_refs: [amazon-ops-main-env-refs, amazon-ops-main-plan-future-sp-api]
+      live_provider_validation_proven: false
+
+  - id: amazon-spapi.pricing.read
+    kind: provider_binding
+    legacy_aliases:
+      - id: commerce.amazon.pricing.read
+        deprecated: true
+        replacement: amazon-spapi.pricing.read
+        public_capability: false
+    purpose: Read Amazon pricing and offers through a normalized read-only binding.
+    capability: commerce.pricing.read
+    lifecycle_status: FEATURE
+    lifecycle_ceiling: FEATURE
+    maturity: F1
+    level: L1
+    autonomy_level: A1
+    inputs: [marketplace_ref, identifiers, condition, pagination]
+    forbidden_inputs: [skill_id, skill_version, provider, adapter, endpoint, credential, access_token, refresh_token]
+    outputs: [identifier, currency, listing_price, shipping_price, landed_price, offers, observed_at, provenance]
+    permissions:
+      external_network: true
+      marketplace_read: [amazon.pricing]
+      marketplace_write: []
+      pii: none
+    approval_required: false
+    preferred_tools: [amazon-sp-api]
+    preferred_providers: [amazon-selling-partner]
+    fallback_policy: none
+    use_when: [current_amazon_pricing_required, product_evaluation_needs_target_price]
+    avoid_when: [historical_series_required, inventory_required, live_before_validation]
+    routing_eligible: false
+    live_execution: blocked
+    production_eligible: false
+    evidence:
+      source_refs: [amazon-ops-main-env-refs]
+      live_provider_validation_proven: false
+
+  - id: amazon-spapi.inventory.read
+    kind: provider_binding
+    legacy_aliases:
+      - id: commerce.amazon.inventory.read
+        deprecated: true
+        replacement: amazon-spapi.inventory.read
+        public_capability: false
+    purpose: Read Amazon seller inventory state without mutation.
+    capability: commerce.inventory.read
+    lifecycle_status: FEATURE
+    lifecycle_ceiling: FEATURE
+    maturity: F1
+    level: L1
+    autonomy_level: A1
+    inputs: [marketplace_ref, scope, seller_skus, asins, pagination]
+    forbidden_inputs: [skill_id, skill_version, provider, adapter, endpoint, credential, access_token, refresh_token, update_quantity]
+    outputs: [sku, asin, available, reserved, inbound, condition, observed_at, provenance]
+    permissions:
+      external_network: true
+      marketplace_read: [amazon.inventory]
+      marketplace_write: []
+      pii: none
+    approval_required: false
+    preferred_tools: [amazon-sp-api]
+    preferred_providers: [amazon-selling-partner]
+    fallback_policy: none
+    use_when: [seller_stock_state_required, sku_availability_required]
+    avoid_when: [catalog_discovery_required, price_required, inventory_mutation_required, live_before_validation]
+    routing_eligible: false
+    live_execution: blocked
+    production_eligible: false
+    evidence:
+      source_refs: [amazon-ops-main-env-refs]
+      live_provider_validation_proven: false
+
+  - id: amazon-spapi.orders.read
+    kind: provider_binding
+    legacy_aliases:
+      - id: commerce.amazon.orders.read
+        deprecated: true
+        replacement: amazon-spapi.orders.read
+        public_capability: false
+    purpose: Read Amazon order state through a PII-minimized normalized binding with zero mutation authority.
+    capability: commerce.orders.read
+    lifecycle_status: FEATURE
+    lifecycle_ceiling: FEATURE
+    maturity: F1
+    level: L1
+    autonomy_level: A1
+    inputs: [marketplace_ref, query, pagination]
+    forbidden_inputs: [skill_id, skill_version, provider, adapter, endpoint, credential, access_token, refresh_token, acknowledge, cancel, fulfill]
+    outputs: [orders, order_id, status, timestamps, items, totals, fulfillment_channel, pii_redaction, pagination, provenance]
+    permissions:
+      external_network: true
+      marketplace_read: [amazon.orders]
+      marketplace_write: []
+      pii: redacted
+    approval_required: false
+    preferred_tools: [amazon-sp-api]
+    preferred_providers: [amazon-selling-partner]
+    fallback_policy: none
+    use_when: [amazon_order_status_required, reconciliation_requires_orders]
+    avoid_when: [fulfillment_mutation_required, unnecessary_buyer_pii, live_before_validation]
+    routing_eligible: false
+    live_execution: blocked
+    production_eligible: false
+    evidence:
+      source_refs: [amazon-ops-main-env-refs]
+      live_provider_validation_proven: false
+
+  - id: shopee-open-api.catalog.read
+    kind: provider_binding
+    legacy_aliases:
+      - id: commerce.shopee.catalog.read
+        deprecated: true
+        replacement: shopee-open-api.catalog.read
+        public_capability: false
+    purpose: Read the authorized Shopee shop catalog while preserving the P0 pre-approval freeze.
+    capability: commerce.catalog.read
+    lifecycle_status: FEATURE
+    lifecycle_ceiling: FEATURE
+    maturity: F1
+    phase: PRE_APPROVAL
+    level: L1
+    autonomy_level: A1
+    inputs: [shop_ref, query]
+    forbidden_inputs: [skill_id, skill_version, provider, adapter, endpoint, credential, partner_key, access_token, refresh_token, mutation]
+    outputs: [products, item_id, title, description, category_id, media, price, stock, variants, attributes, status, provenance]
+    permissions:
+      external_network: true
+      marketplace_read: [shopee.catalog]
+      marketplace_write: []
+      pii: none
+    approval_required: false
+    adapter_id: shopee-open-api
+    provider: shopee-open-platform
+    internal_routing_metadata: true
+    external_gate:
+      id: shopee_business_approval
+      required: true
+      registry_observed_state: UNKNOWN
+      observation: pending_evidence
+      runtime_state_source: PostgreSQL
+      registry_state_is_runtime_authority: false
+    fallback_policy: none
+    use_when: [offline_fixture_validation, authorized_shop_catalog_read_after_external_gate]
+    avoid_when: [third_party_catalog_discovery, any_write, live_before_shopee_approval]
+    routing_eligible: false
+    live_execution: blocked
+    production_eligible: false
+    evidence:
+      source: Scale-Characters/amazon-ops#2
+      head: bccfc0f5142f432f889158870c8f9e26e353fa65
+      github_actions_run: 32169677496
+      ruff: PASS
+      shopee_offline: 28_passed
+      general_suite: 104_passed_1_deselected
+      windows_linux_diagnostic: 1_expected_failure_non_blocking
+      credentials_in_ci: none
+      mutations: OFF
+      live: OFF
+      live_provider_validation_proven: false
+
+  - id: shopee-open-api.orders.read
+    kind: provider_binding
+    legacy_aliases:
+      - id: commerce.shopee.orders.read
+        deprecated: true
+        replacement: shopee-open-api.orders.read
+        public_capability: false
+    purpose: Read authorized Shopee shop orders while preserving PRE-APPROVAL freeze and PII minimization.
+    capability: commerce.orders.read
+    lifecycle_status: FEATURE
+    lifecycle_ceiling: FEATURE
+    maturity: F1
+    phase: PRE_APPROVAL
+    level: L1
+    autonomy_level: A1
+    inputs: [shop_ref, query]
+    forbidden_inputs: [skill_id, skill_version, provider, adapter, endpoint, credential, partner_key, access_token, refresh_token, mutation, fulfill, cancel]
+    outputs: [orders, order_sn, status, items, shipment, tracking, pii_redaction, provenance]
+    permissions:
+      external_network: true
+      marketplace_read: [shopee.orders, shopee.logistics.read]
+      marketplace_write: []
+      pii: redacted
+    approval_required: false
+    adapter_id: shopee-open-api
+    provider: shopee-open-platform
+    internal_routing_metadata: true
+    external_gate:
+      id: shopee_business_approval
+      required: true
+      registry_observed_state: UNKNOWN
+      observation: pending_evidence
+      runtime_state_source: PostgreSQL
+      registry_state_is_runtime_authority: false
+    fallback_policy: none
+    use_when: [offline_fixture_validation, authorized_shop_orders_after_external_gate]
+    avoid_when: [order_mutation, unnecessary_buyer_pii, live_before_shopee_approval]
+    routing_eligible: false
+    live_execution: blocked
+    production_eligible: false
+    evidence:
+      source: Scale-Characters/amazon-ops#2
+      head: bccfc0f5142f432f889158870c8f9e26e353fa65
+      github_actions_run: 32169677496
+      ruff: PASS
+      shopee_offline: 28_passed
+      general_suite: 104_passed_1_deselected
+      windows_linux_diagnostic: 1_expected_failure_non_blocking
+      credentials_in_ci: none
+      mutations: OFF
+      live: OFF
+      live_provider_validation_proven: false
+
+  - id: shopee.product.normalize
+    kind: implementation_binding
+    legacy_aliases:
+      - id: commerce.shopee.product.normalize
+        deprecated: true
+        replacement: shopee.product.normalize
+        public_capability: false
+      - id: shopee-open-api.product.normalize
+        deprecated: true
+        replacement: shopee.product.normalize
+        public_capability: false
+        reason: implementation_is_local_payload_normalization_not_open_api_execution
+    purpose: Normalize an already supplied Shopee-format product payload into the canonical commerce product contract using a deterministic local Python transformation.
+    capability: commerce.product.normalize
+    lifecycle_status: FEATURE
+    lifecycle_ceiling: FEATURE
+    maturity: F1
+    phase: PRE_APPROVAL
+    level: L1
+    autonomy_level: A1
+    inputs: [shop_ref, raw_product, provenance]
+    forbidden_inputs: [skill_id, skill_version, provider, adapter, endpoint, credential, mutation, evaluation_thresholds]
+    outputs: [commerce_product]
+    permissions:
+      external_network: false
+      marketplace_read: []
+      marketplace_write: []
+      pii: none
+    approval_required: false
+    implementation_ref: Scale-Characters/amazon-ops#2:integrations/shopee/catalog.py#normalize_product
+    upstream_requirement:
+      operation: shopee_live_payload_acquisition
+      external_gate: shopee_business_approval
+      required_for_local_normalization: false
+      required_for_live_payload_acquisition: true
+      approval_cannot_override_external_gate: true
+    preferred_tools: [amazon-ops-shopee-normalizer]
+    fallback_policy: none
+    use_when: [shopee_payload_requires_canonical_shape, offline_fixture_validation, authorized_payload_already_available, post_read_normalization_after_separate_live_acquisition]
+    avoid_when: [non_shopee_source, live_payload_must_first_be_acquired, product_matching_required, economic_evaluation_required]
+    routing_eligible: false
+    execution_scope: offline_fixture_only
+    live_execution: blocked
+    production_eligible: false
+    evidence:
+      source: Scale-Characters/amazon-ops#2
+      head: bccfc0f5142f432f889158870c8f9e26e353fa65
+      github_actions_run: 32169677496
+      ruff: PASS
+      shopee_offline: 28_passed
+      general_suite: 104_passed_1_deselected
+      windows_linux_diagnostic: 1_expected_failure_non_blocking
+      credentials_in_ci: none
+      mutations: OFF
+      live: OFF
+      offline_normalization_evidence_proven: true
+      governed_live_payload_contract_validation_proven: false
+      live_provider_validation_proven: false
+
+  - id: commerce.product.evaluate
+    kind: deterministic_domain_skill
+    purpose: Apply deterministic match, compliance and economic gates to a normalized commerce candidate and return an advisory decision.
+    capability: commerce.product.evaluate
+    lifecycle_status: PROTOTYPE
+    lifecycle_ceiling: PROTOTYPE
+    maturity: F2
+    level: L2
+    autonomy_level: A1
+    inputs: [candidate, target_marketplace, target_price, delivered_source_cost, matching_evidence, cost_components]
+    forbidden_inputs: [skill_id, skill_version, provider, adapter, tool, minimum_multiplier, minimum_operating_margin_pct, minimum_contribution_brl, auto_publish, auto_purchase]
+    outputs: [decision, reasons, gates, multiplier, operating_margin_pct, estimated_contribution_brl, missing_inputs, risk_flags, provenance]
+    permissions:
+      external_network: false
+      marketplace_read: []
+      marketplace_write: []
+      pii: none
+    approval_required: false
+    policy: commerce-evaluation-gates-v1
+    policy_owned:
+      minimum_multiplier: 5.0
+      minimum_operating_margin_pct: 60
+      minimum_contribution_brl: 30
+      caller_may_override: false
+    decision_semantics:
+      approved_is_p0_approval: false
+      grants_side_effect_authority: false
+    preferred_tools: [amazon-ops-product-evaluator]
+    fallback_policy: none
+    use_when: [normalized_candidate_requires_evaluation, target_price_and_delivered_cost_available]
+    avoid_when: [caller_wants_threshold_override, caller_expects_publish_or_purchase_authorization]
+    routing_eligible: false
+    live_execution: blocked
+    production_eligible: false
+    evidence: [amazon-ops-main-deterministic-comparison, amazon-ops#1-real-rejection, amazon-ops#2-v1-gate-tests]
+
+principles:
+  - Public capability IDs describe semantics and never encode marketplace/provider identity as an implementation detail.
+  - Provider-specific records are internal bindings and may retain deprecated aliases only for compatibility.
+  - A skill/binding must have explicit inputs, outputs, permissions and intended result.
+  - A clipping becomes a skill only after a reproducible action has been validated.
+  - Human-assisted surfaces must remain marked as such until an actual autonomous integration exists.
+  - New contracts use approval_required; human_approval remains a legacy compatibility field for existing records.
+  - Approval and External Gate are independent concerns; Approval cannot clear an External Gate.
+  - DISCOVERABLE != ROUTING_ELIGIBLE != PRODUCTION_ELIGIBLE.
+  - Marketplace bindings never silently fallback across marketplaces.
+  - FEATURE and PRE_APPROVAL records are discoverable metadata, not routable operational skills.
