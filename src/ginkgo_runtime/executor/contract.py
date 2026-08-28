@@ -24,12 +24,12 @@ Normalized terminal states, adopted as written rather than varied:
 RK-01 owns the mapping onto the frozen result status, and this executor never
 performs it -- ``RuntimeExecutionResult`` has no ``status`` field to put it in.
 
-What is deliberately not here
------------------------------
+What the in-process reference deliberately does not do
+------------------------------------------------------
 
-**No n8n, and no bridge to one.** RK-08B is Wave 2. An in-process executor proves
-the envelope; a second executor adapter proves nothing the first does not, and
-drags in queue mode, encryption-key parity and cross-process teardown.
+RK-08B's n8n implementation lives beside this vendor-neutral contract. It uses
+the same request/result builders and adds no selection field to either envelope.
+The reference executor remains a pure in-process proof of that shared boundary.
 
 **No retries.** ``retry_policy.max_attempts`` is carried in the envelope and set
 to 1 for the slice. A retry requires *both* a retryable failure class *and* a
@@ -69,6 +69,7 @@ __all__ = [
     "InProcessExecutor",
     "Transition",
     "build_execution_request",
+    "build_execution_result",
 ]
 
 REQUEST_SCHEMA_VERSION = "ginkgo.runtime-execution-request.v1"
@@ -115,9 +116,13 @@ class Executor(Protocol):
     """What the kernel requires of anything that runs a skill."""
 
     def execute(
-        self, request: Mapping[str, Any]
+        self, request: Mapping[str, Any], **resolved: Any
     ) -> tuple[Mapping[str, Any], tuple[Transition, ...]]:
-        """``RuntimeExecutionRequest v1`` in; the result and its transitions out."""
+        """Execute a canonical envelope with executor-private resolved arguments.
+
+        The keyword arguments are already resolved upstream. They are not a
+        selection surface and never become fields on ``RuntimeExecutionRequest``.
+        """
         ...
 
 
@@ -173,6 +178,81 @@ def build_execution_request(
     if request.get("task_id"):
         envelope["task_id"] = request["task_id"]
     return envelope
+
+
+_OUTPUT_MISSING = object()
+
+
+def build_execution_result(
+    *,
+    contracts: FrozenContracts,
+    envelope: Mapping[str, Any],
+    state: str,
+    started_at: str,
+    ended_at: str,
+    executor_ref: str,
+    output: Any = _OUTPUT_MISSING,
+    error: Mapping[str, Any] | None = None,
+    artifacts: tuple[Mapping[str, Any], ...] = (),
+    evidence_telemetry_refs: tuple[str, ...] = (),
+    independent_validation: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build and validate the one canonical execution-result shape.
+
+    Executor implementations supply only their outcome and telemetry. Identity,
+    correlation, idempotency, the route-decision reference, terminal semantics,
+    and schema validation all remain centralized in the Executor Contract.
+    """
+    attempt = envelope.get("attempt") or {}
+    result: dict[str, Any] = {
+        "schema_version": RESULT_SCHEMA_VERSION,
+        "execution_id": envelope["execution_id"],
+        "request_id": envelope["request_id"],
+        "correlation_id": envelope["correlation_id"],
+        "idempotency_key": envelope["idempotency_key"],
+        "decision_ref": dict(envelope["decision_ref"]),
+        "state": state,
+        "terminal": state in TERMINAL_STATES,
+        "replayed": False,
+        "partial": False,
+        "dead_lettered": {"dead_lettered": False, "attempts_exhausted": None},
+        "telemetry": {
+            "started_at": started_at,
+            "ended_at": ended_at,
+            "duration_ms": _duration_ms(started_at, ended_at),
+            "attempts": attempt.get("attempt_number", 1),
+            "lease_released": True,
+            "cost_events": [],
+        },
+        "artifacts": [dict(artifact) for artifact in artifacts],
+        "executor_ref": executor_ref,
+        "independent_validation": dict(
+            independent_validation
+            or {
+                "required": bool(
+                    (envelope.get("evidence") or {}).get(
+                        "independent_validation_required", False
+                    )
+                ),
+                "satisfied": None,
+            }
+        ),
+        "error": dict(error) if error else None,
+    }
+    if envelope.get("task_id"):
+        result["task_id"] = envelope["task_id"]
+    if output is not _OUTPUT_MISSING:
+        result["output"] = output
+    if evidence_telemetry_refs:
+        result["evidence_telemetry_refs"] = list(evidence_telemetry_refs)
+
+    violations = contracts.runtime_execution_result.violations(result)
+    if violations:
+        raise ExecutionEnvelopeError(
+            "the executor built a result that is not RuntimeExecutionResult v1 at: %s"
+            % ", ".join(v.locator for v in violations[:6])
+        )
+    return result
 
 
 @dataclass
@@ -296,45 +376,19 @@ class InProcessExecutor:
         output: Any = None,
         error: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
-        result: dict[str, Any] = {
-            "schema_version": RESULT_SCHEMA_VERSION,
-            "execution_id": envelope["execution_id"],
-            "request_id": envelope["request_id"],
-            "correlation_id": envelope["correlation_id"],
-            "idempotency_key": envelope["idempotency_key"],
-            "decision_ref": dict(envelope["decision_ref"]),
-            "state": state,
-            "terminal": state in TERMINAL_STATES,
-            "replayed": False,
-            "partial": False,
-            # An OBJECT, not a boolean: the frozen contract records a terminal
-            # failure after retry exhaustion rather than dropping it silently.
-            "dead_lettered": {"dead_lettered": False, "attempts_exhausted": None},
-            "telemetry": {
-                "started_at": started_at,
-                "ended_at": ended_at,
-                "duration_ms": _duration_ms(started_at, ended_at),
-                "attempts": 1,
-                "lease_released": True,
-                "cost_events": [],
-            },
-            "artifacts": [],
-            # Recorded for audit ONLY, and separately from any provider
-            # reference. Never routing authority, never caller-visible.
-            "executor_ref": "rk-in-process-executor",
-            "independent_validation": {"required": False, "satisfied": None},
-        }
+        kwargs: dict[str, Any] = {}
         if output is not None:
-            result["output"] = output
-        result["error"] = dict(error) if error else None
-
-        violations = self.contracts.runtime_execution_result.violations(result)
-        if violations:
-            raise ExecutionEnvelopeError(
-                "the executor built a result that is not RuntimeExecutionResult v1 at: %s"
-                % ", ".join(v.locator for v in violations[:6])
-            )
-        return result
+            kwargs["output"] = output
+        return build_execution_result(
+            contracts=self.contracts,
+            envelope=envelope,
+            state=state,
+            started_at=started_at,
+            ended_at=ended_at,
+            executor_ref="rk-in-process-executor",
+            error=error,
+            **kwargs,
+        )
 
 
 def _duration_ms(started_at: str, ended_at: str) -> int:
