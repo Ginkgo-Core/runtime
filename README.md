@@ -2,8 +2,9 @@
 
 **Implementation of the Ginkgo Capability Runtime Kernel.**
 
-> Status: **Wave 1 kernel complete and running end to end.** RK-07, RK-01, RK-02, RK-04, RK-08A,
-> RK-09 and RK-06 are implemented, and RK-10's E2E certificate is emitted from a real run.
+> Status: **Wave 1 kernel complete; first Wave 2 executor foundation implemented offline.** RK-07,
+> RK-01, RK-02, RK-04, RK-08A, RK-09 and RK-06 are implemented, RK-10's E2E certificate is emitted
+> from a real run, and RK-08B/A adds the governed n8n adapter boundary without live traffic.
 > This repository was designated as the kernel implementation host on 2026-08-20 (BLK-16). The
 > architecture it implements merged first: `ai-stack#45` (Capability Runtime Kernel v1) and
 > `ai-stack#47` (static P0 conformance).
@@ -35,7 +36,12 @@ Architecture and contracts are **not** owned here.
 | **RK-09 `system.echo.execute`** | **implemented** | [`slice/`](slice/README.md) |
 | **RK-06 Evidence / Audit Writer** | **implemented** | [`src/ginkgo_runtime/evidence/`](src/ginkgo_runtime/evidence) |
 | **RK-10 E2E certificate** | **implemented** | [`slice/e2e-certificate.json`](slice/e2e-certificate.json) |
-| RK-08B n8n bridge | deferred to Wave 2 | `ai-stack#44` |
+| **RK-08B/A n8n bridge foundation** | **implemented; offline only** | [`src/ginkgo_runtime/executor/`](src/ginkgo_runtime/executor) · `ai-stack#44` |
+| RK-08B/B controlled local n8n E2E | deferred | `ai-stack#44` |
+
+RK-08B/A remains `FEATURE` with `routing_eligible=false` and
+`production_eligible=false`. The adapter is not connected to the Runtime Catalog,
+Executor Router, TaskOps persistence, or a live n8n service.
 
 ### Quick start
 
