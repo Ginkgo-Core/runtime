@@ -2,7 +2,8 @@
 
 **Implementation of the Ginkgo Capability Runtime Kernel.**
 
-> Status: **Wave 1 kernel complete and running end to end.** RK-07, RK-01, RK-02, RK-04, RK-08A,
+> Status: **Wave 1 kernel complete and running end to end**, plus the offline half of the n8n
+> bridge (RK-08B-A) behind the same Executor Contract. RK-07, RK-01, RK-02, RK-04, RK-08A,
 > RK-09 and RK-06 are implemented, and RK-10's E2E certificate is emitted from a real run.
 > This repository was designated as the kernel implementation host on 2026-08-20 (BLK-16). The
 > architecture it implements merged first: `ai-stack#45` (Capability Runtime Kernel v1) and
@@ -35,7 +36,8 @@ Architecture and contracts are **not** owned here.
 | **RK-09 `system.echo.execute`** | **implemented** | [`slice/`](slice/README.md) |
 | **RK-06 Evidence / Audit Writer** | **implemented** | [`src/ginkgo_runtime/evidence/`](src/ginkgo_runtime/evidence) |
 | **RK-10 E2E certificate** | **implemented** | [`slice/e2e-certificate.json`](slice/e2e-certificate.json) |
-| RK-08B n8n bridge | deferred to Wave 2 | `ai-stack#44` |
+| **RK-08B-A n8n bridge (offline)** | **implemented** | [`src/ginkgo_runtime/executor/n8n.py`](src/ginkgo_runtime/executor/n8n.py) · [`ADR-RT-003`](docs/adr/ADR-RT-003-n8n-executor-offline.md) |
+| RK-08B-B n8n bridge (live) | not started | `ai-stack#44` |
 
 ### Quick start
 
