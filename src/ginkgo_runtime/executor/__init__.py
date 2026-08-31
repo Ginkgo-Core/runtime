@@ -1,13 +1,28 @@
-"""RK-08A -- Executor Contract, and RK-09 -- the reference deterministic skill.
+"""RK-08A -- Executor Contract, RK-09 -- the reference skill, RK-08B-A -- the n8n bridge.
 
 The Executor Router selects; the Executor Contract normalizes. Only the second
-half is here, with exactly one implementation behind it: an in-process executor,
-so the reference slice runs with zero containers, zero network and zero
-credentials.
+half is here, now with two implementations behind it:
 
-No n8n bridge (RK-08B is Wave 2), no retries, no cancellation, no lease.
+* :class:`InProcessExecutor` -- runs one pure tool in this process, so the
+  reference slice runs with zero containers, zero network and zero credentials;
+* :class:`~ginkgo_runtime.executor.n8n.N8nExecutor` -- runs a bound workflow
+  through n8n, offline, over a transport port whose only shipped implementation
+  replays recorded observations.
 
-Specification: ``Ginkgo-Core/ai-stack#32`` and ``#42``;
+Two implementations, one signature, one result builder. That is what makes
+RK-08B's promotion gate -- *"same TaskOps job executed by n8n and a stub executor
+with equivalent normalized result"* -- a swap rather than an argument.
+
+Both are behind one credential boundary. :mod:`ginkgo_runtime.executor.credentials`
+holds the rule; the inbound half refuses caller-controlled input carrying a
+credential before any transport is touched, and the outbound half refuses to build
+a result carrying one at all.
+
+Neither executor selects anything, and n8n gains no authority by being reachable
+(invariant 11). No live transport, no retries, no cancellation initiation, no
+lease: those are RK-08B-B and later.
+
+Specification: ``Ginkgo-Core/ai-stack#32``, ``#42`` and ``#44``;
 ``architecture/runtime/executor-contract.md`` and ``reference-slice.md``.
 """
 
@@ -15,6 +30,9 @@ from __future__ import annotations
 
 from .contract import (
     DEFAULT_TIMEOUT_MS,
+    IN_PROCESS_EXECUTOR_REF,
+    NON_TERMINAL_STATES,
+    RESULT_REFERENCE_FIELDS,
     TERMINAL_STATES,
     TOOLS,
     ExecutionEnvelopeError,
@@ -22,19 +40,68 @@ from .contract import (
     InProcessExecutor,
     Transition,
     build_execution_request,
+    build_execution_result,
+)
+from .credentials import (
+    CREDENTIAL_NAME_TOKENS,
+    MAX_SCAN_DEPTH,
+    RAW_SECRET_RULES,
+    CredentialBoundaryError,
+    CredentialFinding,
+    assert_no_credentials,
+    credential_findings,
+    is_credential_name,
+    raw_secret_rule,
 )
 from .echo import TOOL_ID, EchoInputError, echo_transform
+from .n8n import (
+    ENVELOPE_REFERENCE_FIELDS,
+    N8N_EXECUTOR_REF,
+    N8N_INTERNAL_KEYS,
+    N8N_STATUS_TO_STATE,
+    N8nBinding,
+    N8nExecutor,
+    N8nObservation,
+    N8nTransport,
+    N8nTransportError,
+    RecordedTransport,
+    project_output,
+)
 
 __all__ = [
+    "CREDENTIAL_NAME_TOKENS",
     "DEFAULT_TIMEOUT_MS",
+    "ENVELOPE_REFERENCE_FIELDS",
+    "IN_PROCESS_EXECUTOR_REF",
+    "MAX_SCAN_DEPTH",
+    "N8N_EXECUTOR_REF",
+    "N8N_INTERNAL_KEYS",
+    "N8N_STATUS_TO_STATE",
+    "NON_TERMINAL_STATES",
+    "RAW_SECRET_RULES",
+    "RESULT_REFERENCE_FIELDS",
     "TERMINAL_STATES",
     "TOOLS",
     "TOOL_ID",
+    "CredentialBoundaryError",
+    "CredentialFinding",
     "EchoInputError",
     "ExecutionEnvelopeError",
     "Executor",
     "InProcessExecutor",
+    "N8nBinding",
+    "N8nExecutor",
+    "N8nObservation",
+    "N8nTransport",
+    "N8nTransportError",
+    "RecordedTransport",
     "Transition",
+    "assert_no_credentials",
     "build_execution_request",
+    "build_execution_result",
+    "credential_findings",
     "echo_transform",
+    "is_credential_name",
+    "project_output",
+    "raw_secret_rule",
 ]

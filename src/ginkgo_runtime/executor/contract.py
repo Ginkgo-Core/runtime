@@ -24,12 +24,28 @@ Normalized terminal states, adopted as written rather than varied:
 RK-01 owns the mapping onto the frozen result status, and this executor never
 performs it -- ``RuntimeExecutionResult`` has no ``status`` field to put it in.
 
+Every result is credential-scanned before it exists
+--------------------------------------------------
+
+``build_execution_result`` is the single place any executor in this kernel builds
+a ``RuntimeExecutionResult v1``, which makes it the single place the outbound
+credential boundary has to hold. A result carrying credential material -- in its
+output, its error, its artifacts or any diagnostic string on it -- is not
+emitted at all: :func:`~ginkgo_runtime.executor.credentials.assert_no_credentials`
+raises before the document is returned, so there is no scrubbed result, no
+partial result and nothing for a downstream to normalise. The rule and the
+reasoning live in :mod:`ginkgo_runtime.executor.credentials`.
+
 What is deliberately not here
 -----------------------------
 
-**No n8n, and no bridge to one.** RK-08B is Wave 2. An in-process executor proves
-the envelope; a second executor adapter proves nothing the first does not, and
-drags in queue mode, encryption-key parity and cross-process teardown.
+**No n8n in this module, and no live one anywhere.** RK-08B-A adds a second
+implementation behind this same contract, in :mod:`ginkgo_runtime.executor.n8n`,
+and it is offline: its transport is a port and the kernel ships only a recorded
+one. Being reachable grants n8n no authority -- the Executor Router selects, this
+contract normalizes, and the bridge is one implementation behind it (invariant
+11). Queue mode, encryption-key parity and cross-process teardown are RK-08B-B
+and are proven by measurement, not by this module.
 
 **No retries.** ``retry_policy.max_attempts`` is carried in the envelope and set
 to 1 for the slice. A retry requires *both* a retryable failure class *and* a
@@ -58,17 +74,23 @@ from typing import Any, Protocol
 
 from ..clock import RuntimeClock
 from ..contracts import FrozenContracts
+from .credentials import CredentialBoundaryError, assert_no_credentials
 from .echo import TOOL_ID, EchoInputError, echo_transform
 
 __all__ = [
     "DEFAULT_TIMEOUT_MS",
+    "IN_PROCESS_EXECUTOR_REF",
+    "NON_TERMINAL_STATES",
+    "RESULT_REFERENCE_FIELDS",
     "TERMINAL_STATES",
     "TOOLS",
+    "CredentialBoundaryError",
     "ExecutionEnvelopeError",
     "Executor",
     "InProcessExecutor",
     "Transition",
     "build_execution_request",
+    "build_execution_result",
 ]
 
 REQUEST_SCHEMA_VERSION = "ginkgo.runtime-execution-request.v1"
@@ -79,6 +101,19 @@ DEFAULT_TIMEOUT_MS = 60000
 
 TERMINAL_STATES = ("succeeded", "failed", "cancelled", "timed_out")
 NON_TERMINAL_STATES = ("queued", "running")
+
+#: Audit-only identity of the in-process executor. Recorded on the result,
+#: separately from any provider reference, and never caller-visible.
+IN_PROCESS_EXECUTOR_REF = "rk-in-process-executor"
+
+#: Fields on ``RuntimeExecutionResult v1`` whose *name* is credential-shaped but
+#: whose declared content is an identifier, not material.
+#:
+#: Empty, and asserted rather than omitted: the frozen result declares no
+#: credential-bearing field at all, so the outbound scan has nothing to exempt.
+#: The constant exists so that adding an exemption is a visible edit here rather
+#: than a quiet argument at a call site.
+RESULT_REFERENCE_FIELDS: tuple[str, ...] = ()
 
 #: The tool registry. One entry, and adding a second is a review, not a config
 #: change: ``system.*`` is a reserved kernel-diagnostics namespace and every
@@ -112,10 +147,21 @@ class Transition:
 
 
 class Executor(Protocol):
-    """What the kernel requires of anything that runs a skill."""
+    """What the kernel requires of anything that runs a skill.
+
+    ``tool_id`` is a separate argument rather than an envelope field, and that is
+    the load-bearing part: ``RuntimeExecutionRequest v1`` carries no tool, engine,
+    workflow or endpoint field, so implementation selection cannot ride in the
+    envelope even by accident. The executor is handed what to run.
+
+    This signature is also the substitutability claim RK-08B's promotion gate
+    rests on -- *"same TaskOps job executed by n8n and a stub executor with
+    equivalent normalized result"*. Two implementations that satisfy one Protocol
+    can be swapped in a test; two that merely resemble each other cannot.
+    """
 
     def execute(
-        self, request: Mapping[str, Any]
+        self, envelope: Mapping[str, Any], *, tool_id: str, payload: Mapping[str, Any]
     ) -> tuple[Mapping[str, Any], tuple[Transition, ...]]:
         """``RuntimeExecutionRequest v1`` in; the result and its transitions out."""
         ...
@@ -296,45 +342,97 @@ class InProcessExecutor:
         output: Any = None,
         error: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
-        result: dict[str, Any] = {
-            "schema_version": RESULT_SCHEMA_VERSION,
-            "execution_id": envelope["execution_id"],
-            "request_id": envelope["request_id"],
-            "correlation_id": envelope["correlation_id"],
-            "idempotency_key": envelope["idempotency_key"],
-            "decision_ref": dict(envelope["decision_ref"]),
-            "state": state,
-            "terminal": state in TERMINAL_STATES,
-            "replayed": False,
-            "partial": False,
-            # An OBJECT, not a boolean: the frozen contract records a terminal
-            # failure after retry exhaustion rather than dropping it silently.
-            "dead_lettered": {"dead_lettered": False, "attempts_exhausted": None},
-            "telemetry": {
-                "started_at": started_at,
-                "ended_at": ended_at,
-                "duration_ms": _duration_ms(started_at, ended_at),
-                "attempts": 1,
-                "lease_released": True,
-                "cost_events": [],
-            },
-            "artifacts": [],
-            # Recorded for audit ONLY, and separately from any provider
-            # reference. Never routing authority, never caller-visible.
-            "executor_ref": "rk-in-process-executor",
-            "independent_validation": {"required": False, "satisfied": None},
-        }
-        if output is not None:
-            result["output"] = output
-        result["error"] = dict(error) if error else None
+        return build_execution_result(
+            self.contracts,
+            envelope,
+            state=state,
+            started_at=started_at,
+            ended_at=ended_at,
+            executor_ref=IN_PROCESS_EXECUTOR_REF,
+            output=output,
+            error=error,
+        )
 
-        violations = self.contracts.runtime_execution_result.violations(result)
-        if violations:
-            raise ExecutionEnvelopeError(
-                "the executor built a result that is not RuntimeExecutionResult v1 at: %s"
-                % ", ".join(v.locator for v in violations[:6])
-            )
-        return result
+
+def build_execution_result(
+    contracts: FrozenContracts,
+    envelope: Mapping[str, Any],
+    *,
+    state: str,
+    started_at: str,
+    ended_at: str,
+    executor_ref: str,
+    output: Any = None,
+    error: Mapping[str, Any] | None = None,
+    independent_validation: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build and self-validate one ``RuntimeExecutionResult v1``.
+
+    Shared by every executor on purpose. RK-08B's promotion gate asks that two
+    implementations return *equivalent normalized results*; the cheapest way to
+    make that true is for one function to build both, so the only fields that can
+    differ are the ones an executor is entitled to differ on -- ``executor_ref``,
+    the state it reached, and what it produced.
+
+    ``executor_ref`` is recorded for audit only. It is never routing authority,
+    never caller-visible, and never appears in a ``RuntimeRouteDecision``.
+    """
+    result: dict[str, Any] = {
+        "schema_version": RESULT_SCHEMA_VERSION,
+        "execution_id": envelope["execution_id"],
+        "request_id": envelope["request_id"],
+        "correlation_id": envelope["correlation_id"],
+        "idempotency_key": envelope["idempotency_key"],
+        "decision_ref": dict(envelope["decision_ref"]),
+        "state": state,
+        "terminal": state in TERMINAL_STATES,
+        "replayed": False,
+        "partial": False,
+        # An OBJECT, not a boolean: the frozen contract records a terminal
+        # failure after retry exhaustion rather than dropping it silently.
+        "dead_lettered": {"dead_lettered": False, "attempts_exhausted": None},
+        "telemetry": {
+            "started_at": started_at,
+            "ended_at": ended_at,
+            "duration_ms": _duration_ms(started_at, ended_at),
+            "attempts": 1,
+            "lease_released": True,
+            "cost_events": [],
+        },
+        "artifacts": [],
+        # Recorded for audit ONLY, and separately from any provider
+        # reference. Never routing authority, never caller-visible.
+        "executor_ref": executor_ref,
+        "independent_validation": (
+            dict(independent_validation)
+            if independent_validation is not None
+            else {"required": False, "satisfied": None}
+        ),
+    }
+    if output is not None:
+        result["output"] = output
+    result["error"] = dict(error) if error else None
+
+    # The outbound credential boundary, at the one place every executor builds a
+    # result. Before the schema check, because a document carrying credential
+    # material must not be emitted whether or not it is otherwise well formed --
+    # and before the return, because the only safe number of such documents to
+    # emit is zero. `output`, `error`, `artifacts` and every diagnostic string on
+    # the result are in scope; there is no path that puts one on a result without
+    # coming through here.
+    assert_no_credentials(
+        result,
+        surface="the RuntimeExecutionResult built by %s" % executor_ref,
+        reference_fields=RESULT_REFERENCE_FIELDS,
+    )
+
+    violations = contracts.runtime_execution_result.violations(result)
+    if violations:
+        raise ExecutionEnvelopeError(
+            "the executor built a result that is not RuntimeExecutionResult v1 at: %s"
+            % ", ".join(v.locator for v in violations[:6])
+        )
+    return result
 
 
 def _duration_ms(started_at: str, ended_at: str) -> int:
