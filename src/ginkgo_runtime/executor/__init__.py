@@ -13,6 +13,11 @@ Two implementations, one signature, one result builder. That is what makes
 RK-08B's promotion gate -- *"same TaskOps job executed by n8n and a stub executor
 with equivalent normalized result"* -- a swap rather than an argument.
 
+Both are behind one credential boundary. :mod:`ginkgo_runtime.executor.credentials`
+holds the rule; the inbound half refuses caller-controlled input carrying a
+credential before any transport is touched, and the outbound half refuses to build
+a result carrying one at all.
+
 Neither executor selects anything, and n8n gains no authority by being reachable
 (invariant 11). No live transport, no retries, no cancellation initiation, no
 lease: those are RK-08B-B and later.
@@ -27,6 +32,7 @@ from .contract import (
     DEFAULT_TIMEOUT_MS,
     IN_PROCESS_EXECUTOR_REF,
     NON_TERMINAL_STATES,
+    RESULT_REFERENCE_FIELDS,
     TERMINAL_STATES,
     TOOLS,
     ExecutionEnvelopeError,
@@ -36,8 +42,20 @@ from .contract import (
     build_execution_request,
     build_execution_result,
 )
+from .credentials import (
+    CREDENTIAL_NAME_TOKENS,
+    MAX_SCAN_DEPTH,
+    RAW_SECRET_RULES,
+    CredentialBoundaryError,
+    CredentialFinding,
+    assert_no_credentials,
+    credential_findings,
+    is_credential_name,
+    raw_secret_rule,
+)
 from .echo import TOOL_ID, EchoInputError, echo_transform
 from .n8n import (
+    ENVELOPE_REFERENCE_FIELDS,
     N8N_EXECUTOR_REF,
     N8N_INTERNAL_KEYS,
     N8N_STATUS_TO_STATE,
@@ -51,15 +69,22 @@ from .n8n import (
 )
 
 __all__ = [
+    "CREDENTIAL_NAME_TOKENS",
     "DEFAULT_TIMEOUT_MS",
+    "ENVELOPE_REFERENCE_FIELDS",
     "IN_PROCESS_EXECUTOR_REF",
+    "MAX_SCAN_DEPTH",
     "N8N_EXECUTOR_REF",
     "N8N_INTERNAL_KEYS",
     "N8N_STATUS_TO_STATE",
     "NON_TERMINAL_STATES",
+    "RAW_SECRET_RULES",
+    "RESULT_REFERENCE_FIELDS",
     "TERMINAL_STATES",
     "TOOLS",
     "TOOL_ID",
+    "CredentialBoundaryError",
+    "CredentialFinding",
     "EchoInputError",
     "ExecutionEnvelopeError",
     "Executor",
@@ -71,8 +96,12 @@ __all__ = [
     "N8nTransportError",
     "RecordedTransport",
     "Transition",
+    "assert_no_credentials",
     "build_execution_request",
     "build_execution_result",
+    "credential_findings",
     "echo_transform",
+    "is_credential_name",
     "project_output",
+    "raw_secret_rule",
 ]

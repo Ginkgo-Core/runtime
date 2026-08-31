@@ -63,6 +63,31 @@ observed and nothing the engine wrote.
 **An unmapped status is a failure.** `N8N_STATUS_TO_STATE` is explicit and closed. Anything outside
 it is `failed` / `INTERNAL`, never success.
 
+**No credential crosses either boundary** (amended by RK-08B-A.1). The adversarial review of this
+change found the credential boundary open in both directions, and both are closed in
+`ginkgo_runtime.executor.credentials`:
+
+*Inbound.* The envelope is schema-validated; `payload` is a separate argument with no schema over
+its interior, and that was the whole smuggling surface — a credential nested at any depth under any
+name, in an artifact block, a config block or ordinary business structure, reached the transport
+untouched. Both surfaces are now scanned before dispatch, and a rejection happens with the transport
+never called and no transition recorded.
+
+*Outbound.* The engine-internal key check keys on n8n's own identifiers, so a projected output free
+of `workflowId` and `runData` and carrying an API key three levels down under a business name was
+emitted as a success. The projected output, every transition and the assembled
+`RuntimeExecutionResult` are now scanned, at the one function every executor builds a result in —
+which puts the in-process executor behind the same boundary rather than only the bridge.
+
+Two rules, because either alone fails open: field names, since `api_key` announces what it holds
+whatever is in it today; and raw material, since a credential under an innocent name is still a
+credential. Both are matched structurally rather than against a list of known top-level fields, and
+three conditions are findings rather than passes — a document deeper than the scan limit, a value
+whose type cannot be read, and a non-string key. **A scan that could not finish is never reported as
+a scan that found nothing.** Nothing that is refused is ever written down: findings carry a pointer
+and a rule name, never the value, which is also why the bridge no longer echoes the engine's own
+status string into an error or a transition reason.
+
 ## Options rejected
 
 **A. Bridge to the live n8n now.** Rejected: it makes the first executor substitution proof depend
@@ -81,12 +106,31 @@ Rejected — it is the exact thing `GL-07` forbids: *"Nenhum Goal pode ser marca
 porque o Executor declarou conclusão."* Without an injected validator the bridge reports `None`, and
 RK-01's veto turns the run into an `ERROR`.
 
+**E. Redact the credential and continue** (RK-08B-A.1). Rejected, for the same reason C was. A
+redacted result is a result built from material that should never have been there, and it hides
+whichever of the two defects produced it — an admission gap upstream, or a binding pointed at the
+wrong block. On the outbound side the boundary emits no result at all rather than a scrubbed one;
+on the inbound side it refuses before dispatch. RK-01 already turns a raising downstream into
+`DOWNSTREAM_CONTRACT_VIOLATION` carrying only the exception's type, so the refusal crosses the Bus
+boundary without carrying anything with it.
+
+**F. Detect secrets by entropy** (RK-08B-A.1). Rejected. This kernel's own documents are full of
+SHA-256 fingerprints, decision hashes and idempotency keys; an entropy rule would call those secrets
+and be switched off within a sprint, and a switched-off boundary is not a boundary. The value rules
+are anchored on published, vendor-assigned credential formats, so a match is evidence rather than a
+guess — and the field-name rule is what covers the material no pattern will ever recognise.
+
 ## Status this change does and does not confer
 
 `RK-08B-A` is **implemented and tested offline**. It is **not** validated against a live engine and
 **not** production eligible; no lifecycle status of any skill or descriptor changes here, no
 workflow is registered, and no route becomes eligible. Existing code is not validation — the
 evidence is the test run, and the test run is offline.
+
+`RK-08B-A.1` closes the two credential-boundary findings above and confers nothing further.
+`lifecycle_status` stays `FEATURE`, `routing_eligible` stays `false`, `production_eligible` stays
+`false`, no live n8n exists, no container runs and no network call is made. A closed boundary is a
+pre-condition for promotion, not a promotion.
 
 ## Pre-conditions RK-08B-B inherits
 

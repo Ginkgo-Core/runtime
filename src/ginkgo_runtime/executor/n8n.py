@@ -46,6 +46,15 @@ nothing the provider wrote -- the same discipline
 :class:`~ginkgo_runtime.executor.contract.InProcessExecutor` applies when it
 reports only an exception's type.
 
+**It never carries a credential across either boundary.** Inbound, the envelope
+*and* the separately-passed ``payload`` are scanned before the transport is
+touched, so caller-controlled input cannot smuggle a credential into the engine
+through a nested artifact, config or arbitrary business block -- and a rejection
+happens pre-dispatch, with the transport never called. Outbound, the projected
+output is scanned again, and so is every transition and the assembled result. The
+rule is in :mod:`ginkgo_runtime.executor.credentials`; both directions fail
+closed, and neither ever writes down what it refused.
+
 **It never guesses a status.** n8n's own vocabulary is mapped explicitly in
 :data:`N8N_STATUS_TO_STATE`; anything outside it is a ``failed`` execution with
 ``INTERNAL``. Fail closed. Treating an unrecognised status as success is how a
@@ -85,8 +94,10 @@ from .contract import (
     Transition,
     build_execution_result,
 )
+from .credentials import assert_no_credentials
 
 __all__ = [
+    "ENVELOPE_REFERENCE_FIELDS",
     "N8N_EXECUTOR_REF",
     "N8N_INTERNAL_KEYS",
     "N8N_STATUS_TO_STATE",
@@ -98,6 +109,14 @@ __all__ = [
     "RecordedTransport",
     "project_output",
 ]
+
+#: Envelope fields the frozen contract declares as credential *references*.
+#:
+#: ``credential_refs`` is required to exist and required to hold identifiers, so
+#: its NAME is exempt from the inbound scan and its CONTENTS are not: a value
+#: there is precisely the contract violation the field's own description warns
+#: about, and the scan is the only thing that would notice.
+ENVELOPE_REFERENCE_FIELDS: tuple[str, ...] = ("credential_refs",)
 
 #: Audit-only identity, recorded on the result beside no provider reference at
 #: all. Never routing authority, never caller-visible, never in a decision.
@@ -136,8 +155,6 @@ N8N_INTERNAL_KEYS = (
     "credentials",
     "credential_id",
 )
-
-MAX_STATUS_ECHO = 64
 
 
 class N8nTransportError(RuntimeError):
@@ -228,9 +245,16 @@ class RecordedTransport:
     #: Workflow references whose transport is unavailable, so the failure class
     #: the bridge has no other way to reach can be exercised.
     unavailable: frozenset[str] = frozenset()
-    #: Every call made, in order. A test asserts on what the bridge sent -- in
-    #: particular that it sent references and never values.
+    #: Every call made, in order, as the identifiers it carried.
     calls: list[tuple[str, ...]] = field(default_factory=list)
+    #: Every call made, in order, as **everything** it carried -- the payload
+    #: included.
+    #:
+    #: ``calls`` alone cannot support a claim that no credential crossed this
+    #: boundary, and a test that asserted one over it would be checking a surface
+    #: the payload never appears on. The payload is the whole smuggling surface,
+    #: so it is recorded here and a test can serialise the lot.
+    dispatched: list[dict[str, Any]] = field(default_factory=list)
     _cursor: dict[str, int] = field(default_factory=dict, repr=False)
 
     def start(
@@ -245,12 +269,25 @@ class RecordedTransport:
         self.calls.append(
             ("start", workflow_ref, correlation_id, idempotency_key, *credential_refs)
         )
+        self.dispatched.append(
+            {
+                "call": "start",
+                "workflow_ref": workflow_ref,
+                "payload": payload,
+                "correlation_id": correlation_id,
+                "idempotency_key": idempotency_key,
+                "credential_refs": list(credential_refs),
+            }
+        )
         if workflow_ref in self.unavailable:
             raise N8nTransportError("no transport is configured for %s" % workflow_ref)
         return self._next(workflow_ref)
 
     def poll(self, *, workflow_ref: str, handle: str | None) -> N8nObservation:
         self.calls.append(("poll", workflow_ref, handle or ""))
+        self.dispatched.append(
+            {"call": "poll", "workflow_ref": workflow_ref, "handle": handle}
+        )
         if workflow_ref in self.unavailable:
             raise N8nTransportError("no transport is configured for %s" % workflow_ref)
         return self._next(workflow_ref)
@@ -329,6 +366,27 @@ class N8nExecutor:
                 % ", ".join(v.locator for v in violations[:6])
             )
 
+        # The INBOUND credential boundary, and it is deliberately the first thing
+        # after the envelope check -- before a transition is recorded, before a
+        # binding is resolved and before the transport exists as far as this
+        # method is concerned.
+        #
+        # The envelope was just validated and `payload` was not, and cannot be:
+        # the frozen envelope is `additionalProperties: false`, but `payload` is a
+        # separate argument carrying arbitrary business data with no schema over
+        # its interior. That is the whole smuggling surface -- an artifact block, a
+        # config block, or any dict nested at any depth under any name. Both are
+        # scanned, and the scan walks structure rather than a list of known
+        # top-level fields.
+        assert_no_credentials(
+            envelope,
+            surface="the RuntimeExecutionRequest handed to the n8n executor",
+            reference_fields=ENVELOPE_REFERENCE_FIELDS,
+        )
+        assert_no_credentials(
+            payload, surface="the payload handed to the n8n executor"
+        )
+
         transitions = [
             Transition("queued", self.clock.now(), "accepted by the n8n executor bridge")
         ]
@@ -355,22 +413,36 @@ class N8nExecutor:
                 },
             )
 
+        # References. The bridge holds no value and resolves none: the adapter
+        # layer does that, and this list is what it is handed. Scanned for raw
+        # material before it crosses -- the field's own contract says these are
+        # IDENTIFIERS, and a misconfigured binding holding a value instead is
+        # exactly the defect nothing else in this module would notice.
+        credential_refs = list(binding.credential_refs) or list(
+            envelope.get("credential_refs") or []
+        )
+        assert_no_credentials(
+            credential_refs,
+            surface="the credential references bound for the n8n transport",
+        )
+
         try:
-            observation = self.transport.start(
-                workflow_ref=binding.workflow_ref,
-                payload=payload,
-                correlation_id=envelope["correlation_id"],
-                idempotency_key=envelope["idempotency_key"],
-                # References. The bridge holds no value and resolves none: the
-                # adapter layer does that, and this list is what it is handed.
-                credential_refs=list(binding.credential_refs)
-                or list(envelope.get("credential_refs") or []),
+            observation = self._observed(
+                self.transport.start(
+                    workflow_ref=binding.workflow_ref,
+                    payload=payload,
+                    correlation_id=envelope["correlation_id"],
+                    idempotency_key=envelope["idempotency_key"],
+                    credential_refs=credential_refs,
+                )
             )
             state = self._state_for(observation.status)
             polls_left = self._poll_budget(envelope, binding)
             while state in NON_TERMINAL_STATES and polls_left > 0:
-                observation = self.transport.poll(
-                    workflow_ref=binding.workflow_ref, handle=observation.handle
+                observation = self._observed(
+                    self.transport.poll(
+                        workflow_ref=binding.workflow_ref, handle=observation.handle
+                    )
                 )
                 state = self._state_for(observation.status)
                 polls_left -= 1
@@ -403,9 +475,11 @@ class N8nExecutor:
                 reason="unrecognised executor status",
                 error={
                     "code": "N8N_STATUS_UNKNOWN",
-                    "message": "the executor reported status %r, which is not in the "
-                    "mapped vocabulary; an unmapped status is never read as success"
-                    % observation.status[:MAX_STATUS_ECHO],
+                    # The status itself is NOT quoted. It is upstream text, and
+                    # upstream text is exactly what the bridge refuses to copy
+                    # into a result -- a truncated echo is still an echo.
+                    "message": "the executor reported a status outside the mapped "
+                    "vocabulary; an unmapped status is never read as success",
                     "category": "INTERNAL",
                     "retryable": False,
                 },
@@ -435,7 +509,7 @@ class N8nExecutor:
                 transitions,
                 started_at,
                 state="failed",
-                reason="the workflow reported %s" % observation.status[:MAX_STATUS_ECHO],
+                reason="the workflow terminated in a failure state",
                 error={
                     "code": "N8N_WORKFLOW_FAILED",
                     # No provider text. See the module docstring.
@@ -517,6 +591,15 @@ class N8nExecutor:
             # not exist, and the block exists to stop exactly that kind of claim.
             if self.validator_ref is not None:
                 validation["validator_ref"] = self.validator_ref
+        # The OUTBOUND credential boundary, on the one thing that leaves this
+        # module. The engine-internal check above is about n8n's *wiring* and
+        # names the misconfigured binding in a `failed` result; this one is about
+        # credential material and does not produce a result at all. A projected
+        # output can be free of every n8n-internal key and still carry an API key
+        # three levels down under a business name, which is why the key check
+        # above is not sufficient and never was.
+        assert_no_credentials(output, surface="the output projected from n8n")
+
         return self._terminal(
             envelope,
             transitions,
@@ -543,6 +626,14 @@ class N8nExecutor:
     ) -> tuple[dict[str, Any], tuple[Transition, ...]]:
         ended_at = self.clock.now()
         transitions.append(Transition(state, ended_at, reason))
+        # Transitions are persisted by RK-06 and are as much an outbound surface
+        # as the result is. They carry only text this module wrote, and this is
+        # what keeps that true when someone later reaches for an upstream string
+        # to make a reason more helpful.
+        assert_no_credentials(
+            [(t.state, t.occurred_at, t.reason) for t in transitions],
+            surface="the transitions recorded by the n8n executor",
+        )
         result = build_execution_result(
             self.contracts,
             envelope,
@@ -555,6 +646,25 @@ class N8nExecutor:
             independent_validation=independent_validation,
         )
         return result, tuple(transitions)
+
+    def _observed(self, observation: N8nObservation) -> N8nObservation:
+        """Refuse an observation whose own metadata carries credential material.
+
+        Only what the bridge *reads* is scanned -- the status and the handle. The
+        observation ``payload`` is the raw engine document and is expected to
+        carry credential material in any real deployment; that is the reason the
+        output is projected from one declared path rather than forwarded, and
+        scanning the whole document here would refuse every honest execution.
+
+        Malformed upstream content is therefore refused *before* normalisation
+        rather than after: a status or a handle is read by the state mapper and
+        the poll loop, and neither would notice.
+        """
+        assert_no_credentials(
+            {"status": observation.status, "handle": observation.handle},
+            surface="an observation returned by the n8n transport",
+        )
+        return observation
 
     def _state_for(self, status: str) -> str | None:
         """The normalized state, or ``None`` for a status outside the vocabulary."""

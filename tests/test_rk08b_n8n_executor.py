@@ -292,11 +292,52 @@ def test_a_malformed_envelope_is_refused_before_anything_runs(contracts):
 
 
 def test_only_credential_references_cross_the_transport_boundary(contracts):
+    """Everything the transport was handed, serialised, not just the identifiers.
+
+    The earlier version of this test read ``transport.calls`` and asserted
+    ``SECRET not in start``. It proved neither half of its own name. ``calls``
+    holds identifiers and never held the ``payload``, which is the only surface a
+    credential would actually ride in on; and ``in`` over a tuple compares
+    elements, so ``"prefix-" + SECRET`` would have passed it. Both are fixed
+    here: the assertion is a substring check over everything that crossed.
+    """
     _, _, transport = run(contracts)
-    start = transport.calls[0]
-    assert start[0] == "start"
-    assert CREDENTIAL_REF in start
-    assert SECRET not in start
+
+    dispatched = transport.dispatched[0]
+    assert dispatched["call"] == "start"
+    assert dispatched["credential_refs"] == [CREDENTIAL_REF]
+    assert SECRET not in json.dumps(transport.dispatched)
+    assert CREDENTIAL_REF in json.dumps(transport.dispatched)
+
+
+def test_a_credential_value_never_becomes_a_credential_reference(contracts):
+    """The negative control the assertion above needs to mean anything.
+
+    An absent secret is only evidence if a present one would have been caught.
+    Here the binding holds a value where the contract requires an identifier, and
+    the boundary refuses it before the transport is called at all — so the clean
+    dispatch above is a boundary holding, not a fixture that never had a secret
+    in it.
+    """
+    from ginkgo_runtime.executor import CredentialBoundaryError
+
+    executor, transport = bridge(
+        contracts,
+        bindings={
+            TOOL_ID: N8nBinding(
+                binding_id=BINDING.binding_id,
+                workflow_ref=WORKFLOW_REF,
+                output_path=BINDING.output_path,
+                credential_refs=(SECRET,),
+            )
+        },
+    )
+    with pytest.raises(CredentialBoundaryError) as excinfo:
+        executor.execute(envelope(), tool_id=TOOL_ID, payload={"message": MESSAGE})
+
+    assert transport.calls == []
+    assert transport.dispatched == []
+    assert SECRET not in str(excinfo.value)
 
 
 def test_the_envelope_carries_no_engine_identity(contracts):

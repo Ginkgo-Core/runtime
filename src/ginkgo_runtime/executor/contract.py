@@ -24,6 +24,18 @@ Normalized terminal states, adopted as written rather than varied:
 RK-01 owns the mapping onto the frozen result status, and this executor never
 performs it -- ``RuntimeExecutionResult`` has no ``status`` field to put it in.
 
+Every result is credential-scanned before it exists
+--------------------------------------------------
+
+``build_execution_result`` is the single place any executor in this kernel builds
+a ``RuntimeExecutionResult v1``, which makes it the single place the outbound
+credential boundary has to hold. A result carrying credential material -- in its
+output, its error, its artifacts or any diagnostic string on it -- is not
+emitted at all: :func:`~ginkgo_runtime.executor.credentials.assert_no_credentials`
+raises before the document is returned, so there is no scrubbed result, no
+partial result and nothing for a downstream to normalise. The rule and the
+reasoning live in :mod:`ginkgo_runtime.executor.credentials`.
+
 What is deliberately not here
 -----------------------------
 
@@ -62,14 +74,17 @@ from typing import Any, Protocol
 
 from ..clock import RuntimeClock
 from ..contracts import FrozenContracts
+from .credentials import CredentialBoundaryError, assert_no_credentials
 from .echo import TOOL_ID, EchoInputError, echo_transform
 
 __all__ = [
     "DEFAULT_TIMEOUT_MS",
     "IN_PROCESS_EXECUTOR_REF",
     "NON_TERMINAL_STATES",
+    "RESULT_REFERENCE_FIELDS",
     "TERMINAL_STATES",
     "TOOLS",
+    "CredentialBoundaryError",
     "ExecutionEnvelopeError",
     "Executor",
     "InProcessExecutor",
@@ -90,6 +105,15 @@ NON_TERMINAL_STATES = ("queued", "running")
 #: Audit-only identity of the in-process executor. Recorded on the result,
 #: separately from any provider reference, and never caller-visible.
 IN_PROCESS_EXECUTOR_REF = "rk-in-process-executor"
+
+#: Fields on ``RuntimeExecutionResult v1`` whose *name* is credential-shaped but
+#: whose declared content is an identifier, not material.
+#:
+#: Empty, and asserted rather than omitted: the frozen result declares no
+#: credential-bearing field at all, so the outbound scan has nothing to exempt.
+#: The constant exists so that adding an exemption is a visible edit here rather
+#: than a quiet argument at a call site.
+RESULT_REFERENCE_FIELDS: tuple[str, ...] = ()
 
 #: The tool registry. One entry, and adding a second is a review, not a config
 #: change: ``system.*`` is a reserved kernel-diagnostics namespace and every
@@ -388,6 +412,19 @@ def build_execution_result(
     if output is not None:
         result["output"] = output
     result["error"] = dict(error) if error else None
+
+    # The outbound credential boundary, at the one place every executor builds a
+    # result. Before the schema check, because a document carrying credential
+    # material must not be emitted whether or not it is otherwise well formed --
+    # and before the return, because the only safe number of such documents to
+    # emit is zero. `output`, `error`, `artifacts` and every diagnostic string on
+    # the result are in scope; there is no path that puts one on a result without
+    # coming through here.
+    assert_no_credentials(
+        result,
+        surface="the RuntimeExecutionResult built by %s" % executor_ref,
+        reference_fields=RESULT_REFERENCE_FIELDS,
+    )
 
     violations = contracts.runtime_execution_result.violations(result)
     if violations:
