@@ -1,0 +1,59 @@
+{
+  "name": "ginkgo-rk08b-ping",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ginkgo-rk08b-ping",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1f000000-0000-4000-8000-00000000ping",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "ginkgo-rk08b-ping"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ JSON.stringify({ ginkgo: { workflow: \"ginkgo.rk08b.ping@1\", status: $json.body.input.value === \"PING\" ? \"success\" : \"error\", correlation_id: $json.body.correlation_id, output: { value: $json.body.input.value === \"PING\" ? \"PONG\" : \"UNEXPECTED\" } } }) }}",
+        "options": {}
+      },
+      "id": "2f000000-0000-4000-8000-00000000pong",
+      "name": "Ginkgo Result Envelope",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "3f000000-0000-4000-8000-0000000respd",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [440, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Ginkgo Result Envelope", "type": "main", "index": 0 }]]
+    },
+    "Ginkgo Result Envelope": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false
+  },
+  "pinData": {},
+  "staticData": null
+}

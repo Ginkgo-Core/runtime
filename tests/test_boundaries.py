@@ -11,6 +11,7 @@ import dataclasses
 import io
 import os
 import socket
+import sys
 import tokenize
 
 import pytest
@@ -23,6 +24,22 @@ from ginkgo_runtime.catalog.manifest import FORBIDDEN_SOURCE_BASENAMES, load_man
 from .conftest import REPO_ROOT, make_snapshot
 
 PACKAGE = os.path.join(REPO_ROOT, "src", "ginkgo_runtime")
+
+#: The single module permitted to import a network library, as a repo-relative
+#: path.
+#:
+#: RK-08B/B's rule 11 -- *"network access must exist only inside the concrete
+#: transport implementation"* -- is enforced here and nowhere else, because here
+#: is the only place it can be enforced structurally. Everything the live n8n
+#: transport does that is worth arguing about lives in
+#: ``executor/n8n_transport.py``, which has no socket; what is left in the
+#: exempt module is byte transfer.
+#:
+#: The exemption is a **list of one** and is asserted to be a list of one below.
+#: Widening it is a visible edit to a test, in a diff a reviewer reads.
+NETWORK_EXEMPT_MODULES = (
+    os.path.join("src", "ginkgo_runtime", "executor", "n8n_http_client.py"),
+)
 
 
 def package_sources():
@@ -226,8 +243,19 @@ def test_the_package_never_enumerates_the_filesystem():
 
 
 def test_the_package_never_imports_a_network_client():
+    """Every module except the one concrete transport. RK-08B/B rule 11.
+
+    ``urllib.parse`` is not on the forbidden list and is not an oversight: it
+    parses strings and opens nothing. ``urllib.request`` -- the half that does
+    open something -- is, and ``test_the_transport_module_imports_only_the_string_half_of_urllib``
+    in ``test_rk08b_live_transport.py`` pins that distinction over the AST rather
+    than over a substring.
+    """
     offenders = []
     for path, text in package_sources():
+        relative = os.path.relpath(path, REPO_ROOT)
+        if relative.replace("/", os.sep) in NETWORK_EXEMPT_MODULES:
+            continue
         forbidden = (
             "import requests",
             "import httpx",
@@ -237,8 +265,50 @@ def test_the_package_never_imports_a_network_client():
         )
         for token in forbidden:
             if token in text:
-                offenders.append((os.path.relpath(path, REPO_ROOT), token))
+                offenders.append((relative, token))
     assert offenders == []
+
+
+def test_exactly_one_module_is_exempt_and_it_is_the_concrete_transport():
+    """The exemption above is only meaningful if it stays a list of one.
+
+    A test that skipped "the network modules" would grow quietly. This one names
+    the count, so adding a second socket to the kernel fails here first.
+    """
+    assert len(NETWORK_EXEMPT_MODULES) == 1
+    exempt = os.path.join(REPO_ROOT, NETWORK_EXEMPT_MODULES[0])
+    assert os.path.isfile(exempt)
+    with open(exempt, encoding="utf-8") as handle:
+        text = _code_only(handle.read())
+    # And it must actually be the transport: an exemption pointing at a module
+    # that imports nothing would pass the test above while the real socket lived
+    # somewhere else.
+    assert "http.client" in text
+
+
+def test_the_exempt_module_is_not_reachable_by_importing_the_package():
+    """``import ginkgo_runtime.executor`` must not drag a socket in with it.
+
+    Every other component imports that package. If the network module came along
+    transitively, "the kernel opens no socket" would be a claim about what the
+    kernel *does* rather than about what it *can* do -- and every offline proof in
+    this suite would be one accidental module-level call away from being false.
+    """
+    import subprocess
+
+    probe = (
+        "import sys; sys.path.insert(0, %r);"
+        "import ginkgo_runtime.executor;"
+        "import ginkgo_runtime.bus, ginkgo_runtime.router, ginkgo_runtime.gate;"
+        "import ginkgo_runtime.evidence, ginkgo_runtime.slice;"
+        "loaded = [m for m in sys.modules if 'n8n_http_client' in m];"
+        "print(loaded)" % os.path.join(REPO_ROOT, "src")
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", probe], capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "[]", result.stdout
 
 
 def test_the_kernel_does_not_depend_on_ginkgo_connect():

@@ -63,6 +63,22 @@ jobs:
           print("kernel imports with stdlib + PyYAML only")
           PY
 
+      - name: Importing the kernel loads no socket
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, "src")
+          # RK-08B-B rule 11. `executor/n8n_http_client.py` is the one module in
+          # the package permitted a network import, and it must not arrive as a
+          # transitive consequence of importing the package every other component
+          # already imports. Reaching a network takes a named import, in a diff.
+          import ginkgo_runtime.executor        # noqa: F401
+          import ginkgo_runtime.slice           # noqa: F401
+          loaded = [name for name in sys.modules if "n8n_http_client" in name]
+          assert loaded == [], loaded
+          print("the kernel imports with no network module loaded")
+          PY
+
       - name: Build the catalog
         run: PYTHONPATH=src python -m ginkgo_runtime.catalog build
 

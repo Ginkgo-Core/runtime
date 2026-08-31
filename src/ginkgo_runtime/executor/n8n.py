@@ -1,4 +1,4 @@
-"""RK-08B-A -- the n8n executor bridge, offline.
+"""RK-08B -- the n8n executor bridge.
 
 n8n is an **executor**. It is not the control plane, it is not the router, it
 holds no state the kernel trusts and it decides nothing (invariant 11). This
@@ -10,12 +10,23 @@ the two are substitutable rather than merely similar.
 
     RuntimeExecutionRequest v1 -> [n8n executor] -> RuntimeExecutionResult v1
 
-**A-half only.** This half is offline. The transport is a port and the kernel
-ships exactly one implementation of it -- :class:`RecordedTransport`, which
-replays observations handed to it. No socket is opened here, no host is named
-here, no credential value is read here, and there is no code path that could do
-any of those things: the module imports nothing that can. Detecting and reaching
-a live n8n is RK-08B-B, and it is a separate change with a separate gate.
+**This module never reaches a network, in either half.** The transport is a
+port. RK-08B-A shipped one implementation of it -- :class:`RecordedTransport`,
+which replays observations handed to it; RK-08B-B adds a second, live one, and
+adds it *elsewhere*: :mod:`ginkgo_runtime.executor.n8n_transport` builds and
+normalises the exchange, and :mod:`ginkgo_runtime.executor.n8n_http_client` is
+the single module in this package permitted to open a socket. No socket is
+opened here, no host is named here, no credential value is read here, and there
+is no code path in this file that could do any of those things: it imports
+nothing that can, and ``tests/test_boundaries.py`` asserts that over the whole
+package with exactly one named exemption.
+
+What RK-08B-B added here, and only here, is
+:data:`N8N_TRANSPORT_FAILURES`: the closed table that turns a transport's
+failure *class* into what a caller is told. It sits in this file rather than in
+the transport because normalisation is the Executor Contract's job -- a
+transport that chose its own error codes would be normalising, and a second
+transport would then be free to normalise differently.
 
 What the bridge refuses to do
 -----------------------------
@@ -75,9 +86,14 @@ kernel's clock is a port; a bridge that raced a real clock would make the E2E
 certificate unreproducible, and a bridge that slept would make the test suite
 slow for no proof. So a run that never reaches a terminal status exhausts its
 budget and becomes ``timed_out`` with ``category: TIMEOUT`` -- the mapping the
-frozen contract declares, reached deterministically. Enforcing a wall-clock bound
-against a live engine is RK-08B-B's problem, where there is something to
-interrupt.
+frozen contract declares, reached deterministically.
+
+The *wall-clock* bound is a different bound and it is enforced where there is
+something to interrupt: the live transport carries a connect deadline and a
+request deadline, and a breach of either arrives here as the ``timeout`` failure
+class, which the table maps to the same ``timed_out`` / ``TIMEOUT`` pair. Two
+mechanisms, one normalized outcome -- so a caller cannot tell a poll-budget
+exhaustion from a socket deadline, and does not need to.
 """
 
 from __future__ import annotations
@@ -101,6 +117,7 @@ __all__ = [
     "N8N_EXECUTOR_REF",
     "N8N_INTERNAL_KEYS",
     "N8N_STATUS_TO_STATE",
+    "N8N_TRANSPORT_FAILURES",
     "N8nBinding",
     "N8nExecutor",
     "N8nObservation",
@@ -157,13 +174,167 @@ N8N_INTERNAL_KEYS = (
 )
 
 
+#: How a transport failure normalises. A closed vocabulary, exactly like
+#: :data:`N8N_STATUS_TO_STATE`, and for the same reason: an unrecognised failure
+#: class falls back to ``unavailable`` rather than being reported as anything
+#: more specific than the bridge can actually justify.
+#:
+#: This is the whole of RK-08B-B's error normalisation, and it lives here rather
+#: than in the live transport on purpose. A transport decides *which class of
+#: thing went wrong*; the Executor Contract decides *what a caller is told about
+#: it*. A transport that chose its own error codes would be taking a
+#: normalisation decision, and normalisation is the Contract's job.
+#:
+#: Every ``message`` is written here, in this file, from the failure class alone.
+#: None is derived from an exception's text, an HTTP body, a response header or a
+#: provider payload -- ``error.schema.json`` forbids all four, and the only way to
+#: keep that true under maintenance is for the strings to have no upstream input
+#: available to them at the point they are written.
+N8N_TRANSPORT_FAILURES: Mapping[str, Mapping[str, Any]] = {
+    "unavailable": {
+        "state": "failed",
+        "code": "N8N_TRANSPORT_UNAVAILABLE",
+        "category": "PROVIDER",
+        "retryable": True,
+        "reason": "the executor transport reported no outcome",
+        "message": "the executor transport did not return an observation",
+    },
+    "connection_refused": {
+        "state": "failed",
+        "code": "N8N_CONNECTION_REFUSED",
+        "category": "PROVIDER",
+        "retryable": True,
+        "reason": "the executor endpoint refused the connection",
+        "message": "the executor endpoint refused the connection",
+    },
+    "timeout": {
+        # `timed_out`, not `failed`: the frozen contract couples that state to
+        # `category: TIMEOUT`, and reporting a deadline breach as a plain failure
+        # would lose the one distinction the mapping exists to make.
+        "state": "timed_out",
+        "code": "N8N_TRANSPORT_TIMEOUT",
+        "category": "TIMEOUT",
+        "retryable": True,
+        "reason": "the executor transport exceeded its bound",
+        "message": "the executor transport exceeded the connect or request bound "
+        "configured for the endpoint",
+    },
+    "unauthorized": {
+        "state": "failed",
+        "code": "N8N_UNAUTHORIZED",
+        # There is no AUTH category in `error.schema.json`; PROVIDER is the
+        # honest one, and inventing a category would be a contract redefinition.
+        "category": "PROVIDER",
+        "retryable": False,
+        "reason": "the executor endpoint rejected the dispatch as unauthorized",
+        "message": "the executor endpoint rejected the dispatch as unauthorized",
+    },
+    "rate_limited": {
+        "state": "failed",
+        "code": "N8N_RATE_LIMITED",
+        "category": "RATE_LIMIT",
+        "retryable": True,
+        "reason": "the executor endpoint rate-limited the dispatch",
+        "message": "the executor endpoint rate-limited the dispatch",
+    },
+    "http_client_error": {
+        "state": "failed",
+        "code": "N8N_HTTP_CLIENT_ERROR",
+        "category": "PROVIDER",
+        "retryable": False,
+        "reason": "the executor endpoint returned a client-error status",
+        # The status code itself is not quoted here. It is not a secret, and it is
+        # also not something a caller has any use for; the dispatch record carries
+        # it for audit instead, where it is read by an operator and not by a skill.
+        "message": "the executor endpoint returned a non-2xx client-error status",
+    },
+    "http_server_error": {
+        "state": "failed",
+        "code": "N8N_HTTP_SERVER_ERROR",
+        "category": "PROVIDER",
+        "retryable": True,
+        "reason": "the executor endpoint returned a server-error status",
+        "message": "the executor endpoint returned a non-2xx server-error status",
+    },
+    "malformed_json": {
+        "state": "failed",
+        "code": "N8N_MALFORMED_RESPONSE",
+        "category": "PROVIDER",
+        "retryable": False,
+        "reason": "the executor endpoint returned a body that is not JSON",
+        "message": "the executor endpoint returned a body that could not be read "
+        "as JSON",
+    },
+    "invalid_result": {
+        "state": "failed",
+        "code": "N8N_INVALID_RESPONSE",
+        "category": "PROVIDER",
+        "retryable": False,
+        "reason": "the executor endpoint returned a structurally invalid result",
+        "message": "the executor endpoint returned a document that is not a "
+        "structurally valid execution result",
+    },
+    "workflow_mismatch": {
+        "state": "failed",
+        "code": "N8N_WORKFLOW_MISMATCH",
+        # INTERNAL, not PROVIDER: a workflow answering under an identity the
+        # binding did not pin is a defect in the kernel's own configuration.
+        "category": "INTERNAL",
+        "retryable": False,
+        "reason": "the responding workflow is not the pinned workflow",
+        "message": "the responding workflow declared an identity other than the "
+        "one the binding pins",
+    },
+    "workflow_not_found": {
+        "state": "failed",
+        "code": "N8N_WORKFLOW_NOT_FOUND",
+        "category": "INTERNAL",
+        "retryable": False,
+        "reason": "the pinned workflow is not registered at the endpoint",
+        "message": "the endpoint has no workflow registered at the pinned path",
+    },
+    "correlation_mismatch": {
+        "state": "failed",
+        "code": "N8N_CORRELATION_MISMATCH",
+        "category": "INTERNAL",
+        "retryable": False,
+        "reason": "the observation belongs to a different correlation",
+        "message": "the executor returned a result carrying a correlation other "
+        "than the one dispatched",
+    },
+    "credential_unresolved": {
+        "state": "failed",
+        "code": "N8N_CREDENTIAL_UNRESOLVED",
+        "category": "INTERNAL",
+        "retryable": False,
+        "reason": "a bound credential reference did not resolve",
+        "message": "a credential reference bound for this executor did not resolve "
+        "at the transport boundary",
+    },
+}
+
+
 class N8nTransportError(RuntimeError):
     """The transport could not obtain an observation.
 
     Distinct from a workflow that ran and failed: this one means the bridge never
     learned an outcome, which is a ``PROVIDER`` failure of the executor, not a
     failure of the skill.
+
+    **It carries a failure class and nothing else.** There is no message
+    parameter, deliberately. A live transport handles exceptions whose text is
+    written by ``http.client``, by the operating system's error table and, for a
+    non-2xx response, potentially by the remote engine itself; a constructor that
+    accepted a string would make "the bridge never quotes upstream text" a rule
+    someone has to remember at every raise site. Here it is a rule the
+    constructor enforces: the only thing that can be passed is a key of
+    :data:`N8N_TRANSPORT_FAILURES`, and anything else fails closed to
+    ``unavailable`` rather than travelling as an unmapped class.
     """
+
+    def __init__(self, failure: str = "unavailable") -> None:
+        self.failure = failure if failure in N8N_TRANSPORT_FAILURES else "unavailable"
+        super().__init__("the n8n transport failed: %s" % self.failure)
 
 
 @dataclass(frozen=True)
@@ -280,7 +451,7 @@ class RecordedTransport:
             }
         )
         if workflow_ref in self.unavailable:
-            raise N8nTransportError("no transport is configured for %s" % workflow_ref)
+            raise N8nTransportError("unavailable")
         return self._next(workflow_ref)
 
     def poll(self, *, workflow_ref: str, handle: str | None) -> N8nObservation:
@@ -289,13 +460,13 @@ class RecordedTransport:
             {"call": "poll", "workflow_ref": workflow_ref, "handle": handle}
         )
         if workflow_ref in self.unavailable:
-            raise N8nTransportError("no transport is configured for %s" % workflow_ref)
+            raise N8nTransportError("unavailable")
         return self._next(workflow_ref)
 
     def _next(self, workflow_ref: str) -> N8nObservation:
         recorded = self.script.get(workflow_ref)
         if not recorded:
-            raise N8nTransportError("nothing recorded for %s" % workflow_ref)
+            raise N8nTransportError("unavailable")
         index = self._cursor.get(workflow_ref, 0)
         self._cursor[workflow_ref] = min(index + 1, len(recorded) - 1)
         return recorded[index]
@@ -446,23 +617,26 @@ class N8nExecutor:
                 )
                 state = self._state_for(observation.status)
                 polls_left -= 1
-        except N8nTransportError:
+        except N8nTransportError as refused:
+            # The exception's text is never read. Only `failure` is, and it can
+            # only ever be a key of the table -- so what a caller is told about a
+            # live dispatch is written in this repository, in full, in advance.
+            #
+            # `retryable` describes the failure class; `retry_policy.max_attempts`
+            # still governs whether anything actually retries. The flag is a
+            # description, not an authorisation.
+            normalised = N8N_TRANSPORT_FAILURES[refused.failure]
             return self._terminal(
                 envelope,
                 transitions,
                 started_at,
-                state="failed",
-                reason="the executor transport reported no outcome",
+                state=str(normalised["state"]),
+                reason=str(normalised["reason"]),
                 error={
-                    "code": "N8N_TRANSPORT_UNAVAILABLE",
-                    # The exception's text is not quoted: it is the transport's
-                    # own string and may name a host or carry a payload.
-                    "message": "the executor transport did not return an observation",
-                    "category": "PROVIDER",
-                    # The class is retryable; retry_policy.max_attempts still
-                    # governs whether anything retries. This flag describes the
-                    # failure, it does not authorise a second attempt.
-                    "retryable": True,
+                    "code": normalised["code"],
+                    "message": normalised["message"],
+                    "category": normalised["category"],
+                    "retryable": normalised["retryable"],
                 },
             )
 
